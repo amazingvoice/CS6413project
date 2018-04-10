@@ -44,6 +44,10 @@ char op_name[20];
 int line_no = 1;
 char *skip;
 int mylength;
+int data_type = 0;
+
+char str1[50];
+char str2[50];
 
 /*
 #define save_return(x) {strncpy(op_name,yytext,19); op_name[19]='\0'; yylval.value=x-ADD; return(x);}
@@ -51,6 +55,7 @@ int mylength;
 
 %}
 
+%option yylineno
 %x comment
 
 %%
@@ -63,8 +68,8 @@ int mylength;
 <comment>"*"+"/"	   BEGIN(INITIAL);
 
  /* tokens */
-"int"			return(KW_INT);
-"float"			return(KW_FLOAT);
+"int"			{data_type = 1; return(KW_INT);}
+"float"			{data_type = 2; return(KW_FLOAT);}
 "if"			return(KW_IF);
 "else"			return(KW_ELSE);
 "while"			return(KW_WHILE);
@@ -87,12 +92,15 @@ int mylength;
 "}"                     return(RBRACE);
 ";"                     return(SEMICOLON);
 ","                     return(COMMA);
+
 [a-zA-Z_][a-zA-Z_0-9]*  { 
 			   yylval.ptr = strdup(yytext);
+			   strcpy(str1, str2);
+			   strcpy(str2, yytext);
 			   return(ID); 
                         }
 
-[0-9]+			{ for (mylength=yyleng, skip=yytext;
+[0-9]+			{ for (mylength = yyleng, skip = yytext;
 			       *skip == '0';
 			       skip++, mylength--)
 			    ;
