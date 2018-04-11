@@ -64,6 +64,13 @@
 /* Copy the first part of user declarations.  */
 #line 1 "parser.y" /* yacc.c:339  */
 
+
+/*
+
+	Qing Zhang(qz761)	CS6413
+
+*/
+
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -103,12 +110,13 @@ sym *temp = NULL;
 bool found = false;
 bool funcAsVar = false;
 bool varAsFunc = false;
+bool syntax_error = false;
 
 char *t_val;
 char *t_ret;
 
 
-#line 112 "parser.tab.c" /* yacc.c:339  */
+#line 120 "parser.tab.c" /* yacc.c:339  */
 
 # ifndef YY_NULLPTR
 #  if defined __cplusplus && 201103L <= __cplusplus
@@ -207,7 +215,7 @@ int yyparse (void);
 
 /* Copy the second part of user declarations.  */
 
-#line 211 "parser.tab.c" /* yacc.c:358  */
+#line 219 "parser.tab.c" /* yacc.c:358  */
 
 #ifdef short
 # undef short
@@ -509,12 +517,12 @@ static const yytype_uint8 yytranslate[] =
   /* YYRLINE[YYN] -- Source line where rule number YYN was defined.  */
 static const yytype_uint16 yyrline[] =
 {
-       0,    76,    76,    77,    78,    79,    82,   133,   132,   216,
-     219,   220,   223,   224,   227,   329,   335,   343,   344,   347,
-     348,   351,   352,   353,   354,   355,   404,   405,   408,   411,
-     412,   415,   416,   420,   419,   445,   446,   470,   473,   474,
-     475,   476,   477,   481,   480,   520,   523,   524,   525,   526,
-     527,   528,   531,   532,   533,   534,   535,   577,   576
+       0,    84,    84,    85,    86,    87,    90,   141,   140,   224,
+     227,   228,   231,   232,   235,   337,   343,   351,   352,   355,
+     356,   359,   360,   361,   362,   363,   412,   413,   416,   419,
+     420,   423,   424,   428,   427,   453,   454,   478,   481,   482,
+     483,   484,   485,   489,   488,   528,   531,   532,   533,   534,
+     535,   536,   539,   540,   541,   542,   543,   585,   584
 };
 #endif
 
@@ -1452,7 +1460,7 @@ yyreduce:
   switch (yyn)
     {
         case 6:
-#line 83 "parser.y" /* yacc.c:1646  */
+#line 91 "parser.y" /* yacc.c:1646  */
     {
 				bool redeclared = false;
 
@@ -1500,11 +1508,11 @@ yyreduce:
 				if(!redeclared)
 					printf("function %s %s(%s) declared in line %d\n", t_ret, yylval, t_val, yylineno);
 			}
-#line 1504 "parser.tab.c" /* yacc.c:1646  */
+#line 1512 "parser.tab.c" /* yacc.c:1646  */
     break;
 
   case 7:
-#line 133 "parser.y" /* yacc.c:1646  */
+#line 141 "parser.y" /* yacc.c:1646  */
     {
 				bool bad_sig = false;
 
@@ -1575,11 +1583,11 @@ yyreduce:
 					printf("%s declared in line %d\n", yylval, yylineno);
 				}
 			}
-#line 1579 "parser.tab.c" /* yacc.c:1646  */
+#line 1587 "parser.tab.c" /* yacc.c:1646  */
     break;
 
   case 8:
-#line 204 "parser.y" /* yacc.c:1646  */
+#line 212 "parser.y" /* yacc.c:1646  */
     {
 				global = true;
 				
@@ -1590,11 +1598,11 @@ yyreduce:
 					free(temp);
 				}
 			}
-#line 1594 "parser.tab.c" /* yacc.c:1646  */
+#line 1602 "parser.tab.c" /* yacc.c:1646  */
     break;
 
   case 14:
-#line 228 "parser.y" /* yacc.c:1646  */
+#line 236 "parser.y" /* yacc.c:1646  */
     {
 				while(head != NULL) {
 
@@ -1694,31 +1702,31 @@ yyreduce:
 				temp = head = tail = NULL;
 
 			}
-#line 1698 "parser.tab.c" /* yacc.c:1646  */
+#line 1706 "parser.tab.c" /* yacc.c:1646  */
     break;
 
   case 15:
-#line 330 "parser.y" /* yacc.c:1646  */
+#line 338 "parser.y" /* yacc.c:1646  */
     {	 
 				type_indicator++;
 				type_indicator %= 2;	
 				type[type_indicator] = 1; 
 			}
-#line 1708 "parser.tab.c" /* yacc.c:1646  */
+#line 1716 "parser.tab.c" /* yacc.c:1646  */
     break;
 
   case 16:
-#line 336 "parser.y" /* yacc.c:1646  */
+#line 344 "parser.y" /* yacc.c:1646  */
     {
 				type_indicator++;
 				type_indicator %= 2;	
 				type[type_indicator] = 2;
 			}
-#line 1718 "parser.tab.c" /* yacc.c:1646  */
+#line 1726 "parser.tab.c" /* yacc.c:1646  */
     break;
 
   case 25:
-#line 356 "parser.y" /* yacc.c:1646  */
+#line 364 "parser.y" /* yacc.c:1646  */
     {
 				while(head != NULL) { /* loop for var_list */
 					
@@ -1767,11 +1775,11 @@ yyreduce:
 				} /* var_list loop */
 				head = tail = NULL;
 			}
-#line 1771 "parser.tab.c" /* yacc.c:1646  */
+#line 1779 "parser.tab.c" /* yacc.c:1646  */
     break;
 
   case 33:
-#line 420 "parser.y" /* yacc.c:1646  */
+#line 428 "parser.y" /* yacc.c:1646  */
     {
 				if(head == NULL) {
 					head = (sym *)malloc(sizeof(sym));
@@ -1794,11 +1802,11 @@ yyreduce:
 					printf("ERROR line %d: head is not NULL.\n", yylineno);
 				}
 			}
-#line 1798 "parser.tab.c" /* yacc.c:1646  */
+#line 1806 "parser.tab.c" /* yacc.c:1646  */
     break;
 
   case 36:
-#line 447 "parser.y" /* yacc.c:1646  */
+#line 455 "parser.y" /* yacc.c:1646  */
     {	
 				if(tail != NULL) {
 					tail->next = (sym *)malloc(sizeof(sym));
@@ -1820,11 +1828,11 @@ yyreduce:
 					printf("ERROR line %d: tail is NULL.\n", yylineno);
 				}
 			}
-#line 1824 "parser.tab.c" /* yacc.c:1646  */
+#line 1832 "parser.tab.c" /* yacc.c:1646  */
     break;
 
   case 43:
-#line 481 "parser.y" /* yacc.c:1646  */
+#line 489 "parser.y" /* yacc.c:1646  */
     {
 				funcAsVar = false;
 				found = false;
@@ -1863,11 +1871,11 @@ yyreduce:
 						printf("ERROR line %d: variable %s not declared.\n", yylineno, yylval);
 				}
 			}
-#line 1867 "parser.tab.c" /* yacc.c:1646  */
+#line 1875 "parser.tab.c" /* yacc.c:1646  */
     break;
 
   case 56:
-#line 536 "parser.y" /* yacc.c:1646  */
+#line 544 "parser.y" /* yacc.c:1646  */
     {
 				found = false;
 				funcAsVar = false;
@@ -1906,11 +1914,11 @@ yyreduce:
 						printf("ERROR line %d: variable %s not declared.\n", yylineno, yylval);
 				}
 			}
-#line 1910 "parser.tab.c" /* yacc.c:1646  */
+#line 1918 "parser.tab.c" /* yacc.c:1646  */
     break;
 
   case 57:
-#line 577 "parser.y" /* yacc.c:1646  */
+#line 585 "parser.y" /* yacc.c:1646  */
     {
 				varAsFunc = false;
 				found = false;
@@ -1956,11 +1964,11 @@ yyreduce:
 					}
 				}
 			}
-#line 1960 "parser.tab.c" /* yacc.c:1646  */
+#line 1968 "parser.tab.c" /* yacc.c:1646  */
     break;
 
 
-#line 1964 "parser.tab.c" /* yacc.c:1646  */
+#line 1972 "parser.tab.c" /* yacc.c:1646  */
       default: break;
     }
   /* User semantic actions sometimes alter yychar, and that requires
@@ -2195,13 +2203,13 @@ yyreturn:
 #endif
   return yyresult;
 }
-#line 625 "parser.y" /* yacc.c:1906  */
+#line 633 "parser.y" /* yacc.c:1906  */
 
 
 main(int argc, char **argv)
 {
 	yyparse();
-	while(gtable != NULL) {
+	while(gtable != NULL && !syntax_error) {
 		if(gtable->called && !(gtable->implemented)) {
 			printf("ERROR: function %s called but not implemented.\n", gtable->name);
 		}
@@ -2213,5 +2221,6 @@ main(int argc, char **argv)
 
 yyerror(char *s)
 {
+	syntax_error = true;
 	fprintf(stderr, "error: %s, line: %d\n", s, yylineno);
 }

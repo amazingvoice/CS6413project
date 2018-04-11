@@ -5,6 +5,8 @@
  *
  * flex input file to generate SiC scanner
  *
+ * Qing Zhang(qz761)
+ *
  */
 
 #include <stdlib.h>

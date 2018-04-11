@@ -3,5 +3,5 @@ NAME: QING ZHANG
 netID: qz761
 
 
-compile:
-use make to compile
+How to compile:
+$ make

@@ -1,4 +1,11 @@
 %{
+
+/*
+
+	Qing Zhang(qz761)	CS6413
+
+*/
+
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -38,6 +45,7 @@ sym *temp = NULL;
 bool found = false;
 bool funcAsVar = false;
 bool varAsFunc = false;
+bool syntax_error = false;
 
 char *t_val;
 char *t_ret;
@@ -627,7 +635,7 @@ function_call	:	ID
 main(int argc, char **argv)
 {
 	yyparse();
-	while(gtable != NULL) {
+	while(gtable != NULL && !syntax_error) {
 		if(gtable->called && !(gtable->implemented)) {
 			printf("ERROR: function %s called but not implemented.\n", gtable->name);
 		}
@@ -639,5 +647,6 @@ main(int argc, char **argv)
 
 yyerror(char *s)
 {
+	syntax_error = true;
 	fprintf(stderr, "error: %s, line: %d\n", s, yylineno);
 }
