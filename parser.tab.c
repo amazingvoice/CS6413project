@@ -74,11 +74,10 @@ extern int yylineno;
 int type[2];
 int type_indicator = 0;
 
-extern char str1[50];
-extern char str2[50];
+extern char second_to_last_id[50];
+extern char last_id[50];
 
 bool global = true;
-char func_def[50];
 
 typedef struct symbol {
 	char name[50];
@@ -87,6 +86,7 @@ typedef struct symbol {
 	bool isGlobal;
 	bool declared;
 	bool implemented;
+	bool called;
 	int lineno;
 	int decl_lineno;
 	int def_lineno;
@@ -102,12 +102,13 @@ sym *temp = NULL;
 
 bool found = false;
 bool funcAsVar = false;
+bool varAsFunc = false;
 
-int lid = 0;
-int gid = 0;
+char *t_val;
+char *t_ret;
 
 
-#line 111 "parser.tab.c" /* yacc.c:339  */
+#line 112 "parser.tab.c" /* yacc.c:339  */
 
 # ifndef YY_NULLPTR
 #  if defined __cplusplus && 201103L <= __cplusplus
@@ -206,7 +207,7 @@ int yyparse (void);
 
 /* Copy the second part of user declarations.  */
 
-#line 210 "parser.tab.c" /* yacc.c:358  */
+#line 211 "parser.tab.c" /* yacc.c:358  */
 
 #ifdef short
 # undef short
@@ -450,16 +451,16 @@ union yyalloc
 /* YYFINAL -- State number of the termination state.  */
 #define YYFINAL  2
 /* YYLAST -- Last index in YYTABLE.  */
-#define YYLAST   119
+#define YYLAST   129
 
 /* YYNTOKENS -- Number of terminals.  */
 #define YYNTOKENS  34
 /* YYNNTS -- Number of nonterminals.  */
-#define YYNNTS  26
+#define YYNNTS  27
 /* YYNRULES -- Number of rules.  */
-#define YYNRULES  56
+#define YYNRULES  58
 /* YYNSTATES -- Number of states.  */
-#define YYNSTATES  98
+#define YYNSTATES  101
 
 /* YYTRANSLATE[YYX] -- Symbol number corresponding to YYX as returned
    by yylex, with out-of-bounds checking.  */
@@ -508,12 +509,12 @@ static const yytype_uint8 yytranslate[] =
   /* YYRLINE[YYN] -- Source line where rule number YYN was defined.  */
 static const yytype_uint16 yyrline[] =
 {
-       0,    75,    75,    76,    77,    78,    81,   123,   122,   193,
-     196,   197,   200,   201,   204,   229,   235,   243,   244,   245,
-     246,   247,   248,   249,   252,   255,   256,   259,   260,   264,
-     263,   287,   288,   309,   310,   313,   316,   317,   318,   319,
-     320,   324,   323,   363,   366,   367,   368,   369,   370,   371,
-     374,   375,   376,   377,   378,   411,   410
+       0,    76,    76,    77,    78,    79,    82,   133,   132,   216,
+     219,   220,   223,   224,   227,   329,   335,   343,   344,   347,
+     348,   351,   352,   353,   354,   355,   404,   405,   408,   411,
+     412,   415,   416,   420,   419,   445,   446,   470,   473,   474,
+     475,   476,   477,   481,   480,   520,   523,   524,   525,   526,
+     527,   528,   531,   532,   533,   534,   535,   577,   576
 };
 #endif
 
@@ -528,10 +529,10 @@ static const char *const yytname[] =
   "OP_GT", "OP_GE", "LPAR", "RPAR", "LBRACE", "RBRACE", "SEMICOLON",
   "COMMA", "INT_LIT", "FLOAT_LIT", "STRING_LIT", "NL_TOKEN", "WS_TOKEN",
   "UMINUS", "$accept", "program", "function_decl", "function_def", "$@1",
-  "body", "decls", "stmts", "decl", "kind", "stmt", "write_expr_list",
-  "wlist_unit", "wlist_rep", "var_list", "$@2", "var_list_rep", "opt_else",
-  "bool_expr", "bool_op", "expr", "$@3", "expr1", "factor",
-  "function_call", "$@4", YY_NULLPTR
+  "body", "decls", "stmts", "decl", "kind", "stmt", "open_stmt",
+  "matched_stmt", "write_expr_list", "wlist_unit", "wlist_rep", "var_list",
+  "$@2", "var_list_rep", "bool_expr", "bool_op", "expr", "$@3", "expr1",
+  "factor", "function_call", "$@4", YY_NULLPTR
 };
 #endif
 
@@ -547,12 +548,12 @@ static const yytype_uint16 yytoknum[] =
 };
 # endif
 
-#define YYPACT_NINF -53
+#define YYPACT_NINF -80
 
 #define yypact_value_is_default(Yystate) \
-  (!!((Yystate) == (-53)))
+  (!!((Yystate) == (-80)))
 
-#define YYTABLE_NINF -56
+#define YYTABLE_NINF -58
 
 #define yytable_value_is_error(Yytable_value) \
   0
@@ -561,16 +562,17 @@ static const yytype_uint16 yytoknum[] =
      STATE-NUM.  */
 static const yytype_int8 yypact[] =
 {
-     -53,    19,   -53,   -53,   -53,   -53,   -53,   -53,     0,     8,
-      23,    59,   -53,   -53,   -10,    25,    11,    28,    45,   -53,
-     -53,   -53,    34,   -53,   -53,    59,    -1,   -53,    53,    38,
-      46,    65,    53,     7,    35,     3,    65,   -53,   -53,   -53,
-     -53,    48,    93,   -53,   -53,   -53,    65,    65,    51,    54,
-     -53,    56,   -53,   -53,    63,    64,    66,   -53,    72,   -53,
-      70,    70,    70,    70,    73,    83,    74,   -53,   -53,   -53,
-      58,    65,    65,   -53,    24,    24,   -53,   -53,    62,   -53,
-     -53,   -53,   -53,   -53,    65,    37,     7,   -53,    90,   108,
-     -53,   -53,   -53,   -53,   -53,    62,   -53,   -53
+     -80,    41,   -80,   -80,   -80,   -80,   -80,   -80,     3,    -6,
+      12,    19,   -80,   -80,    -8,    20,    26,    28,    15,   -80,
+     -80,   -80,    27,   -80,   -80,    19,    -1,   -80,    39,    46,
+      47,    59,    39,    54,    14,    67,    59,   -80,   -80,   -80,
+     -80,   -80,   -80,    37,    90,   -80,   -80,   -80,    59,    59,
+      40,    45,   -80,    48,   -80,   -80,    69,    68,    72,   -80,
+      87,   -80,    64,    64,    64,    64,    88,    80,    89,   -80,
+     -80,   -80,    86,    59,    59,   -80,    25,    25,   -80,   -80,
+      51,   -80,   -80,   -80,   -80,   -80,    59,    24,    54,   -80,
+      91,   -80,    85,   -80,   -80,   -80,   -80,   -80,    51,   -80,
+     -80
 };
 
   /* YYDEFACT[STATE-NUM] -- Default reduction number in state STATE-NUM.
@@ -578,32 +580,33 @@ static const yytype_int8 yypact[] =
      means the default is an error.  */
 static const yytype_uint8 yydefact[] =
 {
-       2,     0,     1,    15,    16,     5,     3,     4,     0,    29,
-       0,     0,    31,    14,     0,    30,     0,     0,     0,     7,
-       6,    32,     0,    10,     8,    12,     0,    11,     0,     0,
-       0,     0,     0,     0,    54,     0,     0,     9,    50,    51,
-      13,     0,    43,    49,    52,    29,     0,     0,     0,     0,
-      26,     0,    27,    25,     0,     0,    54,    48,     0,    17,
-       0,     0,     0,     0,     0,     0,     0,    23,    21,    22,
-      24,     0,     0,    53,    44,    45,    46,    47,     0,    36,
-      37,    38,    39,    40,     0,     0,     0,    42,     0,    33,
-      35,    20,    19,    28,    56,     0,    18,    34
+       2,     0,     1,    15,    16,     5,     3,     4,     0,    33,
+       0,     0,    35,    14,     0,    34,     0,     0,     0,     7,
+       6,    36,     0,    10,     8,    12,     0,    11,     0,     0,
+       0,     0,     0,     0,    56,     0,     0,     9,    52,    53,
+      13,    18,    17,     0,    45,    51,    54,    33,     0,     0,
+       0,     0,    30,     0,    31,    29,     0,     0,    56,    50,
+       0,    22,     0,     0,     0,     0,     0,     0,     0,    27,
+      25,    26,    28,     0,     0,    55,    46,    47,    48,    49,
+       0,    38,    39,    40,    41,    42,     0,     0,     0,    44,
+       0,    19,    17,    37,    24,    23,    32,    58,     0,    20,
+      21
 };
 
   /* YYPGOTO[NTERM-NUM].  */
 static const yytype_int8 yypgoto[] =
 {
-     -53,   -53,   -53,   -53,   -53,     4,   -53,   -53,    91,    -8,
-     -52,   -53,    29,   -53,    85,   -53,   -53,   -53,    71,   -53,
-     -31,   -53,    49,    84,   -53,   -53
+     -80,   -80,   -80,   -80,   -80,    29,   -80,   -80,    92,     0,
+     -67,    17,   -79,   -80,    30,   -80,    93,   -80,   -80,    70,
+     -80,   -31,   -80,    44,    94,   -80,   -80
 };
 
   /* YYDEFGOTO[NTERM-NUM].  */
 static const yytype_int8 yydefgoto[] =
 {
       -1,     1,     5,     6,    22,    24,    25,    26,     7,     8,
-      40,    51,    52,    70,    10,    12,    15,    96,    64,    84,
-      41,    54,    42,    43,    44,    55
+      40,    41,    42,    53,    54,    72,    10,    12,    15,    66,
+      86,    43,    56,    44,    45,    46,    57
 };
 
   /* YYTABLE[YYPACT[STATE-NUM]] -- What to do in state STATE-NUM.  If
@@ -611,34 +614,36 @@ static const yytype_int8 yydefgoto[] =
      number is the opposite.  If YYTABLE_NINF, syntax error.  */
 static const yytype_int8 yytable[] =
 {
-      48,    16,    53,    14,    29,    58,    30,    31,    32,    33,
-      34,     9,    35,    17,    56,    65,    65,    28,    34,     2,
-      35,    36,     3,     4,    37,    36,    89,    38,    39,    36,
-      11,    38,    39,    92,    19,    38,    39,    50,    62,    63,
-      87,    88,    29,    97,    30,    31,    32,    33,    34,    13,
-      35,   -41,    18,    90,    20,    53,    21,   -55,    23,    36,
-      46,    23,     3,     4,    45,    38,    39,    29,    47,    30,
-      31,    32,    33,    34,    59,    35,    34,    67,    35,    71,
-      68,    56,    69,    35,    36,    86,    72,    36,   -55,    91,
-      38,    39,    36,    38,    39,    73,    78,    85,    38,    39,
-      79,    80,    81,    82,    83,    60,    61,    62,    63,    74,
-      75,    76,    77,    94,    95,    93,    27,    49,    66,    57
+      50,    92,    55,    16,    29,    60,    30,    31,    32,    33,
+      34,    14,    35,    91,     9,    17,    11,    67,    67,   100,
+      95,    36,     3,     4,    37,    28,    21,    38,    39,    29,
+     -43,    30,    31,    32,    33,    34,   -57,    35,    13,    64,
+      65,     2,    89,    90,     3,     4,    36,    18,    23,    19,
+      47,    23,    38,    39,    20,    93,    29,    55,    30,    31,
+      32,    33,    34,    61,    35,    34,    69,    35,    48,    49,
+      34,    70,    35,    36,    71,    58,    36,    35,    58,    38,
+      39,    36,    38,    39,    52,    73,    36,    38,    39,    36,
+      74,    98,    38,    39,   -57,    38,    39,    81,    82,    83,
+      84,    85,    62,    63,    64,    65,    76,    77,    78,    79,
+      75,    80,    87,    88,    97,    99,    94,    27,    96,    68,
+       0,     0,     0,     0,     0,    51,     0,     0,     0,    59
 };
 
-static const yytype_uint8 yycheck[] =
+static const yytype_int8 yycheck[] =
 {
-      31,    11,    33,    11,     5,    36,     7,     8,     9,    10,
-      11,    11,    13,    23,    11,    46,    47,    25,    11,     0,
-      13,    22,     3,     4,    25,    22,    78,    28,    29,    22,
-      22,    28,    29,    85,    23,    28,    29,    30,    14,    15,
-      71,    72,     5,    95,     7,     8,     9,    10,    11,    26,
-      13,    16,    27,    84,    26,    86,    11,    22,    24,    22,
-      22,    24,     3,     4,    11,    28,    29,     5,    22,     7,
-       8,     9,    10,    11,    26,    13,    11,    26,    13,    16,
-      26,    11,    26,    13,    22,    27,    22,    22,    22,    85,
-      28,    29,    22,    28,    29,    23,    23,    23,    28,    29,
-      17,    18,    19,    20,    21,    12,    13,    14,    15,    60,
-      61,    62,    63,    23,     6,    86,    25,    32,    47,    35
+      31,    80,    33,    11,     5,    36,     7,     8,     9,    10,
+      11,    11,    13,    80,    11,    23,    22,    48,    49,    98,
+      87,    22,     3,     4,    25,    25,    11,    28,    29,     5,
+      16,     7,     8,     9,    10,    11,    22,    13,    26,    14,
+      15,     0,    73,    74,     3,     4,    22,    27,    24,    23,
+      11,    24,    28,    29,    26,    86,     5,    88,     7,     8,
+       9,    10,    11,    26,    13,    11,    26,    13,    22,    22,
+      11,    26,    13,    22,    26,    11,    22,    13,    11,    28,
+      29,    22,    28,    29,    30,    16,    22,    28,    29,    22,
+      22,     6,    28,    29,    22,    28,    29,    17,    18,    19,
+      20,    21,    12,    13,    14,    15,    62,    63,    64,    65,
+      23,    23,    23,    27,    23,    98,    87,    25,    88,    49,
+      -1,    -1,    -1,    -1,    -1,    32,    -1,    -1,    -1,    35
 };
 
   /* YYSTOS[STATE-NUM] -- The (internal number of the) accessing
@@ -646,37 +651,38 @@ static const yytype_uint8 yycheck[] =
 static const yytype_uint8 yystos[] =
 {
        0,    35,     0,     3,     4,    36,    37,    42,    43,    11,
-      48,    22,    49,    26,    43,    50,    11,    23,    27,    23,
+      50,    22,    51,    26,    43,    52,    11,    23,    27,    23,
       26,    11,    38,    24,    39,    40,    41,    42,    43,     5,
        7,     8,     9,    10,    11,    13,    22,    25,    28,    29,
-      44,    54,    56,    57,    58,    11,    22,    22,    54,    48,
-      30,    45,    46,    54,    55,    59,    11,    57,    54,    26,
-      12,    13,    14,    15,    52,    54,    52,    26,    26,    26,
-      47,    16,    22,    23,    56,    56,    56,    56,    23,    17,
-      18,    19,    20,    21,    53,    23,    27,    54,    54,    44,
-      54,    39,    44,    46,    23,     6,    51,    44
+      44,    45,    46,    55,    57,    58,    59,    11,    22,    22,
+      55,    50,    30,    47,    48,    55,    56,    60,    11,    58,
+      55,    26,    12,    13,    14,    15,    53,    55,    53,    26,
+      26,    26,    49,    16,    22,    23,    57,    57,    57,    57,
+      23,    17,    18,    19,    20,    21,    54,    23,    27,    55,
+      55,    44,    46,    55,    39,    44,    48,    23,     6,    45,
+      46
 };
 
   /* YYR1[YYN] -- Symbol number of symbol that rule YYN derives.  */
 static const yytype_uint8 yyr1[] =
 {
        0,    34,    35,    35,    35,    35,    36,    38,    37,    39,
-      40,    40,    41,    41,    42,    43,    43,    44,    44,    44,
-      44,    44,    44,    44,    45,    46,    46,    47,    47,    49,
-      48,    50,    50,    51,    51,    52,    53,    53,    53,    53,
-      53,    55,    54,    54,    56,    56,    56,    56,    56,    56,
-      57,    57,    57,    57,    57,    59,    58
+      40,    40,    41,    41,    42,    43,    43,    44,    44,    45,
+      45,    46,    46,    46,    46,    46,    46,    46,    47,    48,
+      48,    49,    49,    51,    50,    52,    52,    53,    54,    54,
+      54,    54,    54,    56,    55,    55,    57,    57,    57,    57,
+      57,    57,    58,    58,    58,    58,    58,    60,    59
 };
 
   /* YYR2[YYN] -- Number of symbols on the right hand side of rule YYN.  */
 static const yytype_uint8 yyr2[] =
 {
        0,     2,     0,     2,     2,     2,     6,     0,     8,     4,
-       0,     2,     0,     2,     3,     1,     1,     2,     6,     5,
-       5,     3,     3,     3,     2,     1,     1,     0,     3,     0,
-       3,     0,     3,     0,     2,     3,     1,     1,     1,     1,
-       1,     0,     4,     1,     3,     3,     3,     3,     2,     1,
-       1,     1,     1,     3,     1,     0,     5
+       0,     2,     0,     2,     3,     1,     1,     1,     1,     5,
+       7,     7,     2,     5,     5,     3,     3,     3,     2,     1,
+       1,     0,     3,     0,     3,     0,     3,     3,     1,     1,
+       1,     1,     1,     0,     4,     1,     3,     3,     3,     3,
+       2,     1,     1,     1,     1,     3,     1,     0,     5
 };
 
 
@@ -1446,28 +1452,38 @@ yyreduce:
   switch (yyn)
     {
         case 6:
-#line 82 "parser.y" /* yacc.c:1646  */
+#line 83 "parser.y" /* yacc.c:1646  */
     {
-				char *param1 = ((type[type_indicator++] == 1) ? "int" : "float");
+				bool redeclared = false;
+
+				t_val = ((type[type_indicator++] == 1) ? "int" : "float");
 				type_indicator %= 2;
-				char *param2 = ((type[type_indicator] == 1) ? "int" : "float");
+				t_ret = ((type[type_indicator] == 1) ? "int" : "float");
 				
 				temp = gtable;
 				found = false;
+
 				while(temp != NULL) {
 					if(strcmp(temp->name, yylval) ==  0 && temp->declared) {
+						
+						if(temp->ret_type != t_ret || temp->val_type != t_val) {
+							printf("ERROR: redeclaring %s with different signature in line %d.\n", yylval, yylineno);
+							redeclared = true;	
+							break;
+						}
 						found = true;
 						break;
 					}
 					temp = temp->next;
 				}
-				if(!found) {	
+				if(!found && !redeclared) { /* no function redeclaration */
 					temp = (sym *)malloc(sizeof(sym));
 					strcpy(temp->name, yylval);
-					strcpy(temp->ret_type, param2);
-					strcpy(temp->val_type, param1);
+					strcpy(temp->ret_type, t_ret);
+					strcpy(temp->val_type, t_val);
 					temp->declared = true;
 					temp->implemented = false;
+					temp->called = false;
 					temp->decl_lineno = yylineno;
 	
 					/* add to the head of the gtable list */
@@ -1481,31 +1497,43 @@ yyreduce:
 					}
 				}
 
-				found = false;
-
-				printf("function %s %s(%s) declared in line %d\n", param2, yylval, param1, yylineno);
+				if(!redeclared)
+					printf("function %s %s(%s) declared in line %d\n", t_ret, yylval, t_val, yylineno);
 			}
-#line 1489 "parser.tab.c" /* yacc.c:1646  */
+#line 1504 "parser.tab.c" /* yacc.c:1646  */
     break;
 
   case 7:
-#line 123 "parser.y" /* yacc.c:1646  */
+#line 133 "parser.y" /* yacc.c:1646  */
     {
+				bool bad_sig = false;
+
+				t_val = ((type[type_indicator] == 1) ? "int" : "float");
+				t_ret = ((type[(type_indicator + 1) % 2] == 1) ? "int" : "float");
+
 				temp = gtable;
 				found = false;
+
 				while(temp != NULL) {
-					if(strcmp(temp->name, yylval) ==  0 && temp->declared) {
+					if((strcmp(temp->name, second_to_last_id) == 0) && (temp->declared)) {
+						if(strcmp(temp->ret_type, t_ret) != 0 || strcmp(temp->val_type, t_val) != 0) {
+							printf("ERROR: definition(line: %d) with mismatched signature(line %d) \n", yylineno, temp->decl_lineno);
+							bad_sig = true;
+							break;
+						}
 						temp->implemented = true;
 						found = true;
 						break;
 					}
 					temp = temp->next;
 				}
-				if(!found) {
+
+				if(!found && !bad_sig) {
 					temp = (sym *)malloc(sizeof(sym));
-					strcpy(temp->name, yylval);
+					strcpy(temp->name, second_to_last_id); /* function name */
 					temp->declared = false;
 					temp->implemented = true;
+					temp->called = false;
 					temp->def_lineno = yylineno;
 
 					/* add to the head of the gtable list */
@@ -1518,40 +1546,40 @@ yyreduce:
 						gtable = temp;
 					}
 				}
-				found = false;
-				printf("function %s defined in line %d\n", str1, yylineno);
-
-				global = false;
-				strcpy(func_def, str1);	
-
-				/* function parameter */
 				
-				temp = (sym *)malloc(sizeof(sym));
-				strcpy(temp->name, yylval);
+				if(!bad_sig) {
+					printf("function %s defined in line %d\n", second_to_last_id, yylineno);
+					global = false;
 
-				if(type[type_indicator] == 1)
-					strcpy(temp->val_type, "int");
-				else
-					strcpy(temp->val_type, "float");
-
-				temp->isGlobal = false;
-				temp->lineno = yylineno;
+					/* function parameter */
 				
-				temp->declared = false;
-				temp->implemented = false;
-				temp->next = NULL;
+					temp = (sym *)malloc(sizeof(sym));
+					strcpy(temp->name, yylval);
 
-				ltable = temp;
+					if(type[type_indicator] == 1)
+						strcpy(temp->val_type, "int");
+					else
+						strcpy(temp->val_type, "float");
 
-				(global) ? printf("Global ") : printf("Local ");
-				(type[type_indicator] == 1) ? printf("int variable ") : printf("float variable ");
-				printf("%s declared in line %d\n", yylval, yylineno);
+					temp->isGlobal = false;
+					temp->lineno = yylineno;
+				
+					temp->declared = false;
+					temp->implemented = false;
+					temp->next = NULL;
+
+					ltable = temp;
+
+					(global) ? printf("Global ") : printf("Local ");
+					(type[type_indicator] == 1) ? printf("int variable ") : printf("float variable ");
+					printf("%s declared in line %d\n", yylval, yylineno);
+				}
 			}
-#line 1551 "parser.tab.c" /* yacc.c:1646  */
+#line 1579 "parser.tab.c" /* yacc.c:1646  */
     break;
 
   case 8:
-#line 181 "parser.y" /* yacc.c:1646  */
+#line 204 "parser.y" /* yacc.c:1646  */
     {
 				global = true;
 				
@@ -1562,58 +1590,188 @@ yyreduce:
 					free(temp);
 				}
 			}
-#line 1566 "parser.tab.c" /* yacc.c:1646  */
+#line 1594 "parser.tab.c" /* yacc.c:1646  */
     break;
 
   case 14:
-#line 205 "parser.y" /* yacc.c:1646  */
+#line 228 "parser.y" /* yacc.c:1646  */
     {
-				temp = head;	
-				while(temp != NULL) {
-					if(temp->isGlobal) printf("Global "); 
-					else		  printf("Local ");
-					printf("%s variable %s declared in line %d.\n", 
-						temp->val_type, temp->name, temp->lineno);
-					temp = temp->next; 
-				}
-				temp = NULL;
+				while(head != NULL) {
 
-				/* add varlist to local/global symbol table*/
-				if(global) {
-					tail->next = gtable;
-					gtable = head;
-				}
-				else {
-					tail->next = ltable;
-					ltable = head;
-				}
-				head = tail = NULL;
+					found = false;
+
+					/* search for local redeclaration */
+					if(!global && ltable != NULL) { 
+
+						temp = ltable;
+
+						while(temp != NULL) { /* loop through local symbol table */
+
+							if(strcmp(temp->name, head->name) == 0) {
+
+								if(strcmp(temp->val_type, head->val_type) == 0) {
+									printf("ERROR: Redeclaring local variable %s in line %d.\n", temp->name, yylineno);
+								}
+								else {
+									printf("ERROR: Redeclaring local variable %s with different type in line %d.\n", temp->name, yylineno);
+								}
+								found = true;
+								break;
+							}
+
+							temp = temp->next;
+						}
+					}
+					/* search for global redeclaration */
+					if(global && gtable != NULL) { 
+
+						temp = gtable;
+
+						while(temp != NULL) { /* loop for global symbol table */
+
+							if(strcmp(temp->name, head->name) == 0 && !(temp->declared) && !(temp->implemented)) {
+								if(strcmp(temp->val_type, head->val_type) == 0) {
+									printf("ERROR: Redeclaring global variable %s in line %d.\n", temp->name, yylineno);
+								}
+								else {
+									printf("ERROR: Redeclaring global variable %s with different type in line %d.\n", temp->name, yylineno);
+								}
+
+								found = true;
+								break;
+							}
+							/* funcAsVar*/
+							if(strcmp(temp->name, head->name) == 0 && (temp->declared || temp->implemented)) {
+								
+								printf("ERROR: Redeclaring a function as a global variable %s in line %d.\n", temp->name, yylineno);
+								
+								found = true;
+								break;
+							}
+
+							temp = temp->next;
+						}
+					}
+
+					if(!found) { /* no redeclaration */
+
+						if(head->isGlobal) printf("Global "); 
+						else		  printf("Local ");
+						printf("%s variable %s declared in line %d.\n", head->val_type, head->name, head->lineno);
+
+						if(global) { /* add to gtable */
+							temp = head;
+							head = head->next;
+							if(gtable != NULL) {
+								temp->next = gtable->next;
+								gtable->next = temp;
+							}
+							else {
+								temp->next = NULL;
+								gtable = temp;
+							}
+						}
+						else { /* add to ltable */
+							temp = head;
+							head = head->next;
+							if(ltable != NULL) {
+								temp->next = ltable->next;
+								ltable->next = temp;
+							}
+							else {
+								temp->next = NULL;
+								ltable = temp;
+							}
+						}
+					}
+					else { /* found redeclaration, release memory */
+						temp = head;
+						head = head->next;
+						free(temp);
+					}
+
+				} /* while(head != NULL) */
+				temp = head = tail = NULL;
+
 			}
-#line 1593 "parser.tab.c" /* yacc.c:1646  */
+#line 1698 "parser.tab.c" /* yacc.c:1646  */
     break;
 
   case 15:
-#line 230 "parser.y" /* yacc.c:1646  */
+#line 330 "parser.y" /* yacc.c:1646  */
     {	 
 				type_indicator++;
 				type_indicator %= 2;	
 				type[type_indicator] = 1; 
 			}
-#line 1603 "parser.tab.c" /* yacc.c:1646  */
+#line 1708 "parser.tab.c" /* yacc.c:1646  */
     break;
 
   case 16:
-#line 236 "parser.y" /* yacc.c:1646  */
+#line 336 "parser.y" /* yacc.c:1646  */
     {
 				type_indicator++;
 				type_indicator %= 2;	
 				type[type_indicator] = 2;
 			}
-#line 1613 "parser.tab.c" /* yacc.c:1646  */
+#line 1718 "parser.tab.c" /* yacc.c:1646  */
     break;
 
-  case 29:
-#line 264 "parser.y" /* yacc.c:1646  */
+  case 25:
+#line 356 "parser.y" /* yacc.c:1646  */
+    {
+				while(head != NULL) { /* loop for var_list */
+					
+					funcAsVar = false;
+					found = false;
+
+					if(ltable != NULL) {
+						temp = ltable;
+						while(temp != NULL) { /* loop for local symbol table */
+							if(strcmp(head->name, temp->name) == 0) {
+								printf("Local %s variable %s declared in line %d used in line %d.\n", 
+									temp->val_type, temp->name, temp->lineno, yylineno);
+								found = true;
+								break;
+							}
+							temp = temp->next;
+						}
+					}
+					if(found == false && gtable != NULL) {
+						temp = gtable;
+						while(temp != NULL) { /* loop for global symbol table */
+							if(strcmp(head->name, temp->name) == 0 && !(temp->declared) && !(temp->implemented)) {
+								printf("Global %s variable %s declared in line %d used in line %d.\n", 
+									temp->val_type, temp->name, temp->lineno, yylineno);
+								found = true;
+								break;
+							}
+							if(strcmp(head->name, temp->name) == 0 && (head->declared || head->implemented)) {
+								funcAsVar = true;
+							}
+
+							temp = temp->next;
+						}
+					}
+					if(!found) {
+						if(funcAsVar)
+							printf("ERROR line %d: function %s used as a variable.\n", yylineno, yylval);
+						else
+							printf("ERROR line %d: variable %s not declared.\n", yylineno, yylval);
+					}
+					
+					temp = head;
+					head = head->next;
+					free(temp);
+ 
+				} /* var_list loop */
+				head = tail = NULL;
+			}
+#line 1771 "parser.tab.c" /* yacc.c:1646  */
+    break;
+
+  case 33:
+#line 420 "parser.y" /* yacc.c:1646  */
     {
 				if(head == NULL) {
 					head = (sym *)malloc(sizeof(sym));
@@ -1631,14 +1789,16 @@ yyreduce:
 					head->next = NULL;
 
 					tail = head;		
-				}	
-				
+				}
+				else {
+					printf("ERROR line %d: head is not NULL.\n", yylineno);
+				}
 			}
-#line 1638 "parser.tab.c" /* yacc.c:1646  */
+#line 1798 "parser.tab.c" /* yacc.c:1646  */
     break;
 
-  case 32:
-#line 289 "parser.y" /* yacc.c:1646  */
+  case 36:
+#line 447 "parser.y" /* yacc.c:1646  */
     {	
 				if(tail != NULL) {
 					tail->next = (sym *)malloc(sizeof(sym));
@@ -1656,20 +1816,66 @@ yyreduce:
 					head->implemented = false;
 					tail->next = NULL;
 				}
+				else {
+					printf("ERROR line %d: tail is NULL.\n", yylineno);
+				}
 			}
-#line 1661 "parser.tab.c" /* yacc.c:1646  */
+#line 1824 "parser.tab.c" /* yacc.c:1646  */
     break;
 
-  case 41:
-#line 324 "parser.y" /* yacc.c:1646  */
+  case 43:
+#line 481 "parser.y" /* yacc.c:1646  */
     {
 				funcAsVar = false;
 				found = false;
 
 				if(ltable != NULL) {
 					temp = ltable;
-					while(temp != NULL) {
+					while(temp != NULL) { /* local symbol table */
+						if(strcmp(temp->name, yylval) == 0) {
+							printf("Local %s variable %s declared in line %d used in line %d.\n", 
+								temp->val_type, temp->name, temp->lineno, yylineno);
+							found = true;
+							break;
+						}
+						temp = temp->next;
+					}
+				}
+				if(found == false && gtable != NULL) {
+					temp = gtable;
+					while(temp != NULL) { /* global symbol table */
 						if(strcmp(temp->name, yylval) == 0 && !(temp->declared) && !(temp->implemented)) {
+							printf("Global %s variable %s declared in line %d used in line %d.\n", 
+								temp->val_type, temp->name, temp->lineno, yylineno);
+							found = true;
+							break;
+						}
+						if(strcmp(temp->name, yylval) == 0 && (temp->declared || temp->implemented)) {
+							funcAsVar = true;
+						}
+						temp = temp->next;
+					}
+				}
+				if(!found) {
+					if(funcAsVar)
+						printf("ERROR line %d: function %s used as a variable.\n", yylineno, yylval);
+					else
+						printf("ERROR line %d: variable %s not declared.\n", yylineno, yylval);
+				}
+			}
+#line 1867 "parser.tab.c" /* yacc.c:1646  */
+    break;
+
+  case 56:
+#line 536 "parser.y" /* yacc.c:1646  */
+    {
+				found = false;
+				funcAsVar = false;
+
+				if(ltable != NULL) {
+					temp = ltable;
+					while(temp != NULL) {
+						if(strcmp(temp->name, yylval) == 0) {
 							printf("Local %s variable %s declared in line %d used in line %d.\n", 
 								temp->val_type, temp->name, temp->lineno, yylineno);
 							found = true;
@@ -1697,54 +1903,22 @@ yyreduce:
 					if(funcAsVar)
 						printf("ERROR line %d: function %s used as a variable.\n", yylineno, yylval);
 					else
-						printf("ERROR line %d: variable %s not declared.\n", yylval);
+						printf("ERROR line %d: variable %s not declared.\n", yylineno, yylval);
 				}
 			}
-#line 1704 "parser.tab.c" /* yacc.c:1646  */
+#line 1910 "parser.tab.c" /* yacc.c:1646  */
     break;
 
-  case 54:
-#line 379 "parser.y" /* yacc.c:1646  */
+  case 57:
+#line 577 "parser.y" /* yacc.c:1646  */
     {
+				varAsFunc = false;
 				found = false;
-				if(ltable != NULL) {
-					temp = ltable;
-					while(temp != NULL) {
-						if(strcmp(temp->name, yylval) == 0 && !(temp->declared) && !(temp->implemented)) {
-							printf("Local %s variable %s declared in line %d used in line %d.\n", 
-								temp->val_type, temp->name, temp->lineno, yylineno);
-							found = true;
-							break;
-						}
-						temp = temp->next;
-					}
-				}
-				if(found == false && gtable != NULL) {
-					temp = gtable;
-					while(temp != NULL) {
-						if(strcmp(temp->name, yylval) == 0 && !(temp->declared) && !(temp->implemented)) {
-							printf("Global %s variable %s declared in line %d used in line %d.\n", 
-								temp->val_type, temp->name, temp->lineno, yylineno);
-							found = true;
-							break;
-						}
-						temp = temp->next;
-					}
-				}
-				if(!found)
-					printf("Variable %s not declared.\n", yylval);
-			}
-#line 1738 "parser.tab.c" /* yacc.c:1646  */
-    break;
 
-  case 55:
-#line 411 "parser.y" /* yacc.c:1646  */
-    {
-				found = false;
 				if(ltable != NULL) {
 					temp = ltable;
-					while(temp != NULL) {
-						if(strcmp(temp->name, yylval) == 0 && !(temp->declared) && !(temp->implemented)) {
+					while(temp != NULL) { /* check if a variable is used as a function */
+						if(strcmp(temp->name, yylval) == 0) {
 							printf("ERROR line %d: variable %s used as function.\n", yylineno, temp->name);
 							found = true;
 							break;
@@ -1757,26 +1931,36 @@ yyreduce:
 					while(temp != NULL) {
 						if(strcmp(temp->name, yylval) == 0) {
 							if(temp->implemented) {
-								printf("Function %s defined in line %d used in line %d.\n", temp->name, temp->lineno, yylineno);
+								temp->called = true;
+								printf("Function %s defined in line %d used in line %d.\n", temp->name, temp->def_lineno, yylineno);
+								found = true;
+								break;
+							}
+							else if(temp->declared) {
+								temp->called = true;
+								printf("Function %s declared in line %d used in line %d.\n", temp->name, temp->decl_lineno, yylineno);
 								found = true;
 								break;
 							}
 							else {
-								printf("ERROR line %d: no definition for function %s.\n", yylineno, yylval);
-								found = true;
-								break;
-
+								varAsFunc = true;
 							}
 						}
 						temp = temp->next;
 					}
+					if(!found) {
+						if(varAsFunc)
+							printf("ERROR line %d: variable %s used as a function.\n", yylineno, yylval);
+						else
+							printf("ERROR line %d: function %s is not declared.\n", yylineno, yylval);
+					}
 				}
 			}
-#line 1776 "parser.tab.c" /* yacc.c:1646  */
+#line 1960 "parser.tab.c" /* yacc.c:1646  */
     break;
 
 
-#line 1780 "parser.tab.c" /* yacc.c:1646  */
+#line 1964 "parser.tab.c" /* yacc.c:1646  */
       default: break;
     }
   /* User semantic actions sometimes alter yychar, and that requires
@@ -2011,12 +2195,20 @@ yyreturn:
 #endif
   return yyresult;
 }
-#line 447 "parser.y" /* yacc.c:1906  */
+#line 625 "parser.y" /* yacc.c:1906  */
 
 
 main(int argc, char **argv)
 {
 	yyparse();
+	while(gtable != NULL) {
+		if(gtable->called && !(gtable->implemented)) {
+			printf("ERROR: function %s called but not implemented.\n", gtable->name);
+		}
+		temp = gtable;
+		gtable = gtable->next;
+		free(temp);
+	}
 }
 
 yyerror(char *s)

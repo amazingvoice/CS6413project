@@ -9,11 +9,10 @@ extern int yylineno;
 int type[2];
 int type_indicator = 0;
 
-extern char str1[50];
-extern char str2[50];
+extern char second_to_last_id[50];
+extern char last_id[50];
 
 bool global = true;
-char func_def[50];
 
 typedef struct symbol {
 	char name[50];
@@ -22,6 +21,7 @@ typedef struct symbol {
 	bool isGlobal;
 	bool declared;
 	bool implemented;
+	bool called;
 	int lineno;
 	int decl_lineno;
 	int def_lineno;
@@ -37,9 +37,10 @@ sym *temp = NULL;
 
 bool found = false;
 bool funcAsVar = false;
+bool varAsFunc = false;
 
-int lid = 0;
-int gid = 0;
+char *t_val;
+char *t_ret;
 
 %}
 
@@ -80,26 +81,36 @@ program		:
 
 function_decl	:	kind ID LPAR kind RPAR SEMICOLON 
 			{
-				char *param1 = ((type[type_indicator++] == 1) ? "int" : "float");
+				bool redeclared = false;
+
+				t_val = ((type[type_indicator++] == 1) ? "int" : "float");
 				type_indicator %= 2;
-				char *param2 = ((type[type_indicator] == 1) ? "int" : "float");
+				t_ret = ((type[type_indicator] == 1) ? "int" : "float");
 				
 				temp = gtable;
 				found = false;
+
 				while(temp != NULL) {
 					if(strcmp(temp->name, yylval) ==  0 && temp->declared) {
+						
+						if(temp->ret_type != t_ret || temp->val_type != t_val) {
+							printf("ERROR: redeclaring %s with different signature in line %d.\n", yylval, yylineno);
+							redeclared = true;	
+							break;
+						}
 						found = true;
 						break;
 					}
 					temp = temp->next;
 				}
-				if(!found) {	
+				if(!found && !redeclared) { /* no function redeclaration */
 					temp = (sym *)malloc(sizeof(sym));
 					strcpy(temp->name, yylval);
-					strcpy(temp->ret_type, param2);
-					strcpy(temp->val_type, param1);
+					strcpy(temp->ret_type, t_ret);
+					strcpy(temp->val_type, t_val);
 					temp->declared = true;
 					temp->implemented = false;
+					temp->called = false;
 					temp->decl_lineno = yylineno;
 	
 					/* add to the head of the gtable list */
@@ -113,29 +124,41 @@ function_decl	:	kind ID LPAR kind RPAR SEMICOLON
 					}
 				}
 
-				found = false;
-
-				printf("function %s %s(%s) declared in line %d\n", param2, yylval, param1, yylineno);
+				if(!redeclared)
+					printf("function %s %s(%s) declared in line %d\n", t_ret, yylval, t_val, yylineno);
 			}
 		;
 
 function_def	:	kind ID LPAR kind ID RPAR 
 			{
+				bool bad_sig = false;
+
+				t_val = ((type[type_indicator] == 1) ? "int" : "float");
+				t_ret = ((type[(type_indicator + 1) % 2] == 1) ? "int" : "float");
+
 				temp = gtable;
 				found = false;
+
 				while(temp != NULL) {
-					if(strcmp(temp->name, yylval) ==  0 && temp->declared) {
+					if((strcmp(temp->name, second_to_last_id) == 0) && (temp->declared)) {
+						if(strcmp(temp->ret_type, t_ret) != 0 || strcmp(temp->val_type, t_val) != 0) {
+							printf("ERROR: definition(line: %d) with mismatched signature(line %d) \n", yylineno, temp->decl_lineno);
+							bad_sig = true;
+							break;
+						}
 						temp->implemented = true;
 						found = true;
 						break;
 					}
 					temp = temp->next;
 				}
-				if(!found) {
+
+				if(!found && !bad_sig) {
 					temp = (sym *)malloc(sizeof(sym));
-					strcpy(temp->name, yylval);
+					strcpy(temp->name, second_to_last_id); /* function name */
 					temp->declared = false;
 					temp->implemented = true;
+					temp->called = false;
 					temp->def_lineno = yylineno;
 
 					/* add to the head of the gtable list */
@@ -148,34 +171,34 @@ function_def	:	kind ID LPAR kind ID RPAR
 						gtable = temp;
 					}
 				}
-				found = false;
-				printf("function %s defined in line %d\n", str1, yylineno);
-
-				global = false;
-				strcpy(func_def, str1);	
-
-				/* function parameter */
 				
-				temp = (sym *)malloc(sizeof(sym));
-				strcpy(temp->name, yylval);
+				if(!bad_sig) {
+					printf("function %s defined in line %d\n", second_to_last_id, yylineno);
+					global = false;
 
-				if(type[type_indicator] == 1)
-					strcpy(temp->val_type, "int");
-				else
-					strcpy(temp->val_type, "float");
-
-				temp->isGlobal = false;
-				temp->lineno = yylineno;
+					/* function parameter */
 				
-				temp->declared = false;
-				temp->implemented = false;
-				temp->next = NULL;
+					temp = (sym *)malloc(sizeof(sym));
+					strcpy(temp->name, yylval);
 
-				ltable = temp;
+					if(type[type_indicator] == 1)
+						strcpy(temp->val_type, "int");
+					else
+						strcpy(temp->val_type, "float");
 
-				(global) ? printf("Global ") : printf("Local ");
-				(type[type_indicator] == 1) ? printf("int variable ") : printf("float variable ");
-				printf("%s declared in line %d\n", yylval, yylineno);
+					temp->isGlobal = false;
+					temp->lineno = yylineno;
+				
+					temp->declared = false;
+					temp->implemented = false;
+					temp->next = NULL;
+
+					ltable = temp;
+
+					(global) ? printf("Global ") : printf("Local ");
+					(type[type_indicator] == 1) ? printf("int variable ") : printf("float variable ");
+					printf("%s declared in line %d\n", yylval, yylineno);
+				}
 			}
 			body
 			{
@@ -203,27 +226,104 @@ stmts		:
 
 decl		:	kind var_list SEMICOLON 
 			{
-				temp = head;	
-				while(temp != NULL) {
-					if(temp->isGlobal) printf("Global "); 
-					else		  printf("Local ");
-					printf("%s variable %s declared in line %d.\n", 
-						temp->val_type, temp->name, temp->lineno);
-					temp = temp->next; 
-				}
-				temp = NULL;
+				while(head != NULL) {
 
-				/* add varlist to local/global symbol table*/
-				if(global) {
-					tail->next = gtable;
-					gtable = head;
-				}
-				else {
-					tail->next = ltable;
-					ltable = head;
-				}
-				head = tail = NULL;
-			}
+					found = false;
+
+					/* search for local redeclaration */
+					if(!global && ltable != NULL) { 
+
+						temp = ltable;
+
+						while(temp != NULL) { /* loop through local symbol table */
+
+							if(strcmp(temp->name, head->name) == 0) {
+
+								if(strcmp(temp->val_type, head->val_type) == 0) {
+									printf("ERROR: Redeclaring local variable %s in line %d.\n", temp->name, yylineno);
+								}
+								else {
+									printf("ERROR: Redeclaring local variable %s with different type in line %d.\n", temp->name, yylineno);
+								}
+								found = true;
+								break;
+							}
+
+							temp = temp->next;
+						}
+					}
+					/* search for global redeclaration */
+					if(global && gtable != NULL) { 
+
+						temp = gtable;
+
+						while(temp != NULL) { /* loop for global symbol table */
+
+							if(strcmp(temp->name, head->name) == 0 && !(temp->declared) && !(temp->implemented)) {
+								if(strcmp(temp->val_type, head->val_type) == 0) {
+									printf("ERROR: Redeclaring global variable %s in line %d.\n", temp->name, yylineno);
+								}
+								else {
+									printf("ERROR: Redeclaring global variable %s with different type in line %d.\n", temp->name, yylineno);
+								}
+
+								found = true;
+								break;
+							}
+							/* funcAsVar*/
+							if(strcmp(temp->name, head->name) == 0 && (temp->declared || temp->implemented)) {
+								
+								printf("ERROR: Redeclaring a function as a global variable %s in line %d.\n", temp->name, yylineno);
+								
+								found = true;
+								break;
+							}
+
+							temp = temp->next;
+						}
+					}
+
+					if(!found) { /* no redeclaration */
+
+						if(head->isGlobal) printf("Global "); 
+						else		  printf("Local ");
+						printf("%s variable %s declared in line %d.\n", head->val_type, head->name, head->lineno);
+
+						if(global) { /* add to gtable */
+							temp = head;
+							head = head->next;
+							if(gtable != NULL) {
+								temp->next = gtable->next;
+								gtable->next = temp;
+							}
+							else {
+								temp->next = NULL;
+								gtable = temp;
+							}
+						}
+						else { /* add to ltable */
+							temp = head;
+							head = head->next;
+							if(ltable != NULL) {
+								temp->next = ltable->next;
+								ltable->next = temp;
+							}
+							else {
+								temp->next = NULL;
+								ltable = temp;
+							}
+						}
+					}
+					else { /* found redeclaration, release memory */
+						temp = head;
+						head = head->next;
+						free(temp);
+					}
+
+				} /* while(head != NULL) */
+				temp = head = tail = NULL;
+
+			} /* end action for decl */
 		;
 
 kind		:	KW_INT 
@@ -240,11 +340,67 @@ kind		:	KW_INT
 			}
 		;
 
-stmt		:	expr SEMICOLON 
-		|	KW_IF LPAR bool_expr RPAR stmt opt_else 
+stmt		:	matched_stmt
+		|	open_stmt
+		;
+
+open_stmt	:	KW_IF LPAR bool_expr RPAR stmt
+		|	KW_IF LPAR bool_expr RPAR matched_stmt KW_ELSE open_stmt
+		;
+
+matched_stmt	:	KW_IF LPAR bool_expr RPAR matched_stmt KW_ELSE matched_stmt
+		|	expr SEMICOLON 
 		|	KW_WHILE LPAR bool_expr RPAR stmt 
 		|	KW_WHILE LPAR bool_expr RPAR body
-		|	KW_READ var_list SEMICOLON 
+		|	KW_READ var_list SEMICOLON
+			{
+				while(head != NULL) { /* loop for var_list */
+					
+					funcAsVar = false;
+					found = false;
+
+					if(ltable != NULL) {
+						temp = ltable;
+						while(temp != NULL) { /* loop for local symbol table */
+							if(strcmp(head->name, temp->name) == 0) {
+								printf("Local %s variable %s declared in line %d used in line %d.\n", 
+									temp->val_type, temp->name, temp->lineno, yylineno);
+								found = true;
+								break;
+							}
+							temp = temp->next;
+						}
+					}
+					if(found == false && gtable != NULL) {
+						temp = gtable;
+						while(temp != NULL) { /* loop for global symbol table */
+							if(strcmp(head->name, temp->name) == 0 && !(temp->declared) && !(temp->implemented)) {
+								printf("Global %s variable %s declared in line %d used in line %d.\n", 
+									temp->val_type, temp->name, temp->lineno, yylineno);
+								found = true;
+								break;
+							}
+							if(strcmp(head->name, temp->name) == 0 && (head->declared || head->implemented)) {
+								funcAsVar = true;
+							}
+
+							temp = temp->next;
+						}
+					}
+					if(!found) {
+						if(funcAsVar)
+							printf("ERROR line %d: function %s used as a variable.\n", yylineno, yylval);
+						else
+							printf("ERROR line %d: variable %s not declared.\n", yylineno, yylval);
+					}
+					
+					temp = head;
+					head = head->next;
+					free(temp);
+ 
+				} /* var_list loop */
+				head = tail = NULL;
+			}
 		|	KW_WRITE write_expr_list SEMICOLON 
 		|	KW_RETURN expr SEMICOLON 
 		;
@@ -278,8 +434,10 @@ var_list	:	ID
 					head->next = NULL;
 
 					tail = head;		
-				}	
-				
+				}
+				else {
+					printf("ERROR line %d: head is not NULL.\n", yylineno);
+				}
 			} 
 			var_list_rep
 		;
@@ -303,11 +461,10 @@ var_list_rep	:
 					head->implemented = false;
 					tail->next = NULL;
 				}
+				else {
+					printf("ERROR line %d: tail is NULL.\n", yylineno);
+				}
 			}
-		;
-
-opt_else	:	
-		|	KW_ELSE stmt
 		;
 
 bool_expr	:	expr bool_op expr 
@@ -327,8 +484,63 @@ expr		:	ID
 
 				if(ltable != NULL) {
 					temp = ltable;
-					while(temp != NULL) {
+					while(temp != NULL) { /* local symbol table */
+						if(strcmp(temp->name, yylval) == 0) {
+							printf("Local %s variable %s declared in line %d used in line %d.\n", 
+								temp->val_type, temp->name, temp->lineno, yylineno);
+							found = true;
+							break;
+						}
+						temp = temp->next;
+					}
+				}
+				if(found == false && gtable != NULL) {
+					temp = gtable;
+					while(temp != NULL) { /* global symbol table */
 						if(strcmp(temp->name, yylval) == 0 && !(temp->declared) && !(temp->implemented)) {
+							printf("Global %s variable %s declared in line %d used in line %d.\n", 
+								temp->val_type, temp->name, temp->lineno, yylineno);
+							found = true;
+							break;
+						}
+						if(strcmp(temp->name, yylval) == 0 && (temp->declared || temp->implemented)) {
+							funcAsVar = true;
+						}
+						temp = temp->next;
+					}
+				}
+				if(!found) {
+					if(funcAsVar)
+						printf("ERROR line %d: function %s used as a variable.\n", yylineno, yylval);
+					else
+						printf("ERROR line %d: variable %s not declared.\n", yylineno, yylval);
+				}
+			} 
+			OP_ASSIGN expr 
+		|	expr1	
+		;
+
+expr1		:	expr1 OP_PLUS expr1
+		|	expr1 OP_MINUS expr1
+		|	expr1 OP_MULT expr1
+		|	expr1 OP_DIV expr1
+		|	OP_MINUS factor %prec UMINUS
+		|	factor
+		;
+
+factor		:	INT_LIT 
+		| 	FLOAT_LIT 
+		| 	function_call 
+		| 	LPAR expr RPAR
+		|	ID
+			{
+				found = false;
+				funcAsVar = false;
+
+				if(ltable != NULL) {
+					temp = ltable;
+					while(temp != NULL) {
+						if(strcmp(temp->name, yylval) == 0) {
 							printf("Local %s variable %s declared in line %d used in line %d.\n", 
 								temp->val_type, temp->name, temp->lineno, yylineno);
 							found = true;
@@ -356,64 +568,20 @@ expr		:	ID
 					if(funcAsVar)
 						printf("ERROR line %d: function %s used as a variable.\n", yylineno, yylval);
 					else
-						printf("ERROR line %d: variable %s not declared.\n", yylval);
+						printf("ERROR line %d: variable %s not declared.\n", yylineno, yylval);
 				}
-			} 
-			OP_ASSIGN expr 
-		|	expr1	
-		;
-
-expr1		:	expr1 OP_PLUS expr1
-		|	expr1 OP_MINUS expr1
-		|	expr1 OP_MULT expr1
-		|	expr1 OP_DIV expr1
-		|	OP_MINUS factor %prec UMINUS
-		|	factor
-		;
-
-factor		:	INT_LIT 
-		| 	FLOAT_LIT 
-		| 	function_call 
-		| 	LPAR expr RPAR
-		|	ID
-			{
-				found = false;
-				if(ltable != NULL) {
-					temp = ltable;
-					while(temp != NULL) {
-						if(strcmp(temp->name, yylval) == 0 && !(temp->declared) && !(temp->implemented)) {
-							printf("Local %s variable %s declared in line %d used in line %d.\n", 
-								temp->val_type, temp->name, temp->lineno, yylineno);
-							found = true;
-							break;
-						}
-						temp = temp->next;
-					}
-				}
-				if(found == false && gtable != NULL) {
-					temp = gtable;
-					while(temp != NULL) {
-						if(strcmp(temp->name, yylval) == 0 && !(temp->declared) && !(temp->implemented)) {
-							printf("Global %s variable %s declared in line %d used in line %d.\n", 
-								temp->val_type, temp->name, temp->lineno, yylineno);
-							found = true;
-							break;
-						}
-						temp = temp->next;
-					}
-				}
-				if(!found)
-					printf("Variable %s not declared.\n", yylval);
 			} 
 		;
 
 function_call	:	ID 
 			{
+				varAsFunc = false;
 				found = false;
+
 				if(ltable != NULL) {
 					temp = ltable;
-					while(temp != NULL) {
-						if(strcmp(temp->name, yylval) == 0 && !(temp->declared) && !(temp->implemented)) {
+					while(temp != NULL) { /* check if a variable is used as a function */
+						if(strcmp(temp->name, yylval) == 0) {
 							printf("ERROR line %d: variable %s used as function.\n", yylineno, temp->name);
 							found = true;
 							break;
@@ -426,18 +594,28 @@ function_call	:	ID
 					while(temp != NULL) {
 						if(strcmp(temp->name, yylval) == 0) {
 							if(temp->implemented) {
-								printf("Function %s defined in line %d used in line %d.\n", temp->name, temp->lineno, yylineno);
+								temp->called = true;
+								printf("Function %s defined in line %d used in line %d.\n", temp->name, temp->def_lineno, yylineno);
+								found = true;
+								break;
+							}
+							else if(temp->declared) {
+								temp->called = true;
+								printf("Function %s declared in line %d used in line %d.\n", temp->name, temp->decl_lineno, yylineno);
 								found = true;
 								break;
 							}
 							else {
-								printf("ERROR line %d: no definition for function %s.\n", yylineno, yylval);
-								found = true;
-								break;
-
+								varAsFunc = true;
 							}
 						}
 						temp = temp->next;
+					}
+					if(!found) {
+						if(varAsFunc)
+							printf("ERROR line %d: variable %s used as a function.\n", yylineno, yylval);
+						else
+							printf("ERROR line %d: function %s is not declared.\n", yylineno, yylval);
 					}
 				}
 			}
@@ -449,6 +627,14 @@ function_call	:	ID
 main(int argc, char **argv)
 {
 	yyparse();
+	while(gtable != NULL) {
+		if(gtable->called && !(gtable->implemented)) {
+			printf("ERROR: function %s called but not implemented.\n", gtable->name);
+		}
+		temp = gtable;
+		gtable = gtable->next;
+		free(temp);
+	}
 }
 
 yyerror(char *s)

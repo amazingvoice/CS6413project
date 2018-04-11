@@ -44,10 +44,9 @@ char op_name[20];
 int line_no = 1;
 char *skip;
 int mylength;
-int data_type = 0;
 
-char str1[50];
-char str2[50];
+char second_to_last_id[50];
+char last_id[50];
 
 /*
 #define save_return(x) {strncpy(op_name,yytext,19); op_name[19]='\0'; yylval.value=x-ADD; return(x);}
@@ -68,8 +67,8 @@ char str2[50];
 <comment>"*"+"/"	   BEGIN(INITIAL);
 
  /* tokens */
-"int"			{data_type = 1; return(KW_INT);}
-"float"			{data_type = 2; return(KW_FLOAT);}
+"int"			return(KW_INT);
+"float"			return(KW_FLOAT);
 "if"			return(KW_IF);
 "else"			return(KW_ELSE);
 "while"			return(KW_WHILE);
@@ -95,8 +94,8 @@ char str2[50];
 
 [a-zA-Z_][a-zA-Z_0-9]*  { 
 			   yylval.ptr = strdup(yytext);
-			   strcpy(str1, str2);
-			   strcpy(str2, yytext);
+			   strcpy(second_to_last_id, last_id);
+			   strcpy(last_id, yytext);
 			   return(ID); 
                         }
 

@@ -563,17 +563,16 @@ char op_name[20];
 int line_no = 1;
 char *skip;
 int mylength;
-int data_type = 0;
 
-char str1[50];
-char str2[50];
+char second_to_last_id[50];
+char last_id[50];
 
 /*
 #define save_return(x) {strncpy(op_name,yytext,19); op_name[19]='\0'; yylval.value=x-ADD; return(x);}
 */
 
 
-#line 577 "lex.yy.c"
+#line 576 "lex.yy.c"
 
 #define INITIAL 0
 #define comment 1
@@ -756,11 +755,11 @@ YY_DECL
 	register char *yy_cp, *yy_bp;
 	register int yy_act;
     
-#line 61 "tok.l"
+#line 60 "tok.l"
 
 
  /* Code to deal with comments borrowed from GNU flex manual. */
-#line 764 "lex.yy.c"
+#line 763 "lex.yy.c"
 
 	if ( !(yy_init) )
 		{
@@ -855,164 +854,164 @@ do_action:	/* This label is used only to access EOF actions. */
 
 case 1:
 YY_RULE_SETUP
-#line 64 "tok.l"
+#line 63 "tok.l"
 BEGIN(comment);
 	YY_BREAK
 case 2:
 YY_RULE_SETUP
-#line 65 "tok.l"
+#line 64 "tok.l"
 /* eat anything that's not a '*' */
 	YY_BREAK
 case 3:
 YY_RULE_SETUP
-#line 66 "tok.l"
+#line 65 "tok.l"
 /* eat up '*'s not followed by '/'s */
 	YY_BREAK
 case 4:
 /* rule 4 can match eol */
 YY_RULE_SETUP
-#line 67 "tok.l"
+#line 66 "tok.l"
 ++line_no;
 	YY_BREAK
 case 5:
 YY_RULE_SETUP
-#line 68 "tok.l"
+#line 67 "tok.l"
 BEGIN(INITIAL);
 	YY_BREAK
 /* tokens */
 case 6:
 YY_RULE_SETUP
-#line 71 "tok.l"
-{data_type = 1; return(KW_INT);}
+#line 70 "tok.l"
+return(KW_INT);
 	YY_BREAK
 case 7:
 YY_RULE_SETUP
-#line 72 "tok.l"
-{data_type = 2; return(KW_FLOAT);}
+#line 71 "tok.l"
+return(KW_FLOAT);
 	YY_BREAK
 case 8:
 YY_RULE_SETUP
-#line 73 "tok.l"
+#line 72 "tok.l"
 return(KW_IF);
 	YY_BREAK
 case 9:
 YY_RULE_SETUP
-#line 74 "tok.l"
+#line 73 "tok.l"
 return(KW_ELSE);
 	YY_BREAK
 case 10:
 YY_RULE_SETUP
-#line 75 "tok.l"
+#line 74 "tok.l"
 return(KW_WHILE);
 	YY_BREAK
 case 11:
 YY_RULE_SETUP
-#line 76 "tok.l"
+#line 75 "tok.l"
 return(KW_RETURN);
 	YY_BREAK
 case 12:
 YY_RULE_SETUP
-#line 77 "tok.l"
+#line 76 "tok.l"
 return(KW_READ);
 	YY_BREAK
 case 13:
 YY_RULE_SETUP
-#line 78 "tok.l"
+#line 77 "tok.l"
 return(KW_WRITE);
 	YY_BREAK
 case 14:
 YY_RULE_SETUP
-#line 79 "tok.l"
+#line 78 "tok.l"
 return(OP_PLUS);
 	YY_BREAK
 case 15:
 YY_RULE_SETUP
-#line 80 "tok.l"
+#line 79 "tok.l"
 return(OP_MINUS);
 	YY_BREAK
 case 16:
 YY_RULE_SETUP
-#line 81 "tok.l"
+#line 80 "tok.l"
 return(OP_MULT);
 	YY_BREAK
 case 17:
 YY_RULE_SETUP
-#line 82 "tok.l"
+#line 81 "tok.l"
 return(OP_DIV);
 	YY_BREAK
 case 18:
 YY_RULE_SETUP
-#line 83 "tok.l"
+#line 82 "tok.l"
 return(OP_ASSIGN);
 	YY_BREAK
 case 19:
 YY_RULE_SETUP
-#line 84 "tok.l"
+#line 83 "tok.l"
 return(OP_EQ); /* equal */
 	YY_BREAK
 case 20:
 YY_RULE_SETUP
-#line 85 "tok.l"
+#line 84 "tok.l"
 return(OP_LT); /* less than */
 	YY_BREAK
 case 21:
 YY_RULE_SETUP
-#line 86 "tok.l"
+#line 85 "tok.l"
 return(OP_GT); /* greater than */
 	YY_BREAK
 case 22:
 YY_RULE_SETUP
-#line 87 "tok.l"
+#line 86 "tok.l"
 return(OP_LE); /* less than or equal */
 	YY_BREAK
 case 23:
 YY_RULE_SETUP
-#line 88 "tok.l"
+#line 87 "tok.l"
 return(OP_GE); /* greater than or equal */
 	YY_BREAK
 case 24:
 YY_RULE_SETUP
-#line 89 "tok.l"
+#line 88 "tok.l"
 return(LPAR);
 	YY_BREAK
 case 25:
 YY_RULE_SETUP
-#line 90 "tok.l"
+#line 89 "tok.l"
 return(RPAR);
 	YY_BREAK
 case 26:
 YY_RULE_SETUP
-#line 91 "tok.l"
+#line 90 "tok.l"
 return(LBRACE);
 	YY_BREAK
 case 27:
 YY_RULE_SETUP
-#line 92 "tok.l"
+#line 91 "tok.l"
 return(RBRACE);
 	YY_BREAK
 case 28:
 YY_RULE_SETUP
-#line 93 "tok.l"
+#line 92 "tok.l"
 return(SEMICOLON);
 	YY_BREAK
 case 29:
 YY_RULE_SETUP
-#line 94 "tok.l"
+#line 93 "tok.l"
 return(COMMA);
 	YY_BREAK
 case 30:
 YY_RULE_SETUP
-#line 96 "tok.l"
+#line 95 "tok.l"
 { 
 			   yylval.ptr = strdup(yytext);
-			   strcpy(str1, str2);
-			   strcpy(str2, yytext);
+			   strcpy(second_to_last_id, last_id);
+			   strcpy(last_id, yytext);
 			   return(ID); 
                         }
 	YY_BREAK
 case 31:
 YY_RULE_SETUP
-#line 103 "tok.l"
+#line 102 "tok.l"
 { for (mylength = yyleng, skip = yytext;
 			       *skip == '0';
 			       skip++, mylength--)
@@ -1033,7 +1032,7 @@ YY_RULE_SETUP
 	YY_BREAK
 case 32:
 YY_RULE_SETUP
-#line 121 "tok.l"
+#line 120 "tok.l"
 { yylval.valuef = atof(yytext);
 			  if (yyleng > 20)
 			    {
@@ -1048,7 +1047,7 @@ YY_RULE_SETUP
 case 33:
 /* rule 33 can match eol */
 YY_RULE_SETUP
-#line 132 "tok.l"
+#line 131 "tok.l"
 { /* string literal; not in original language description. */
 			   yytext[yyleng-1] = '\0';
 			   yylval.ptr = strdup(yytext+1);
@@ -1058,17 +1057,17 @@ YY_RULE_SETUP
 case 34:
 /* rule 34 can match eol */
 YY_RULE_SETUP
-#line 138 "tok.l"
+#line 137 "tok.l"
 { line_no++; }
 	YY_BREAK
 case 35:
 YY_RULE_SETUP
-#line 139 "tok.l"
+#line 138 "tok.l"
 { }  
 	YY_BREAK
 case 36:
 YY_RULE_SETUP
-#line 140 "tok.l"
+#line 139 "tok.l"
 { fprintf (stderr,
 				   "Illegal or out of place character '%c (0x%x)' on line %d.\n",
 				   yytext[0], yytext[0], line_no);
@@ -1076,10 +1075,10 @@ YY_RULE_SETUP
 	YY_BREAK
 case 37:
 YY_RULE_SETUP
-#line 145 "tok.l"
+#line 144 "tok.l"
 ECHO;
 	YY_BREAK
-#line 1083 "lex.yy.c"
+#line 1082 "lex.yy.c"
 case YY_STATE_EOF(INITIAL):
 case YY_STATE_EOF(comment):
 	yyterminate();
@@ -2086,7 +2085,7 @@ void yyfree (void * ptr )
 
 #define YYTABLES_NAME "yytables"
 
-#line 145 "tok.l"
+#line 144 "tok.l"
 
 
 int yywrap ()
