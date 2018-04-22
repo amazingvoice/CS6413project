@@ -87,28 +87,32 @@ int type_indicator = 0;
 
 /* symbol table */
 typedef struct symbol {
+	
 	char name[50];
-	char val_type[10];
-	char ret_type[10];
+	int  val_type;
+	int  ret_type;
 	bool isGlobal;
-	bool declared;
+	int  lineno;
+
+	// function only
+	bool declared;	
 	bool implemented;
 	bool called;
-	int lineno;
-	int decl_lineno;
-	int def_lineno;
+	int  decl_lineno;	
+	int  def_lineno;
+
 	struct symbol *next;
 } sym;
 
 sym *ltable = NULL;
 sym *gtable = NULL;
 
-sym *head = NULL;
-sym *tail = NULL;
+sym *head = NULL; // head of var_list
+sym *tail = NULL; // tail of var_list
 sym *temp = NULL;
 
-char *t_val;
-char *t_ret;
+int t_val;
+int t_ret;
 
 /* flags */
 bool global = true;
@@ -140,39 +144,12 @@ struct idval {
 	int lineno;
 };
 
-struct ast * newast(int nodetype, struct ast *l, struct ast *r) {
-	struct ast *a = (struct ast *)malloc(sizeof(struct ast));
-	a->nodetype = nodetype;
-	if(nodetype == 'M')
-		a->datatype = l->datatype;
-	else
-		a->datatype = ( (l->datatype == r->datatype) ? l->datatype : TYPE_INVALID );
-	a->l = l;
-	a->r = r;
-	return a;
-}
-
-struct ast * newnum(double d, int datatype) {
-	struct numval *a = (struct numval *)malloc(sizeof(struct numval));
-	a->nodetype = 'N';
-	a->datatype = datatype;
-	a->val = d;
-	return (struct ast *)a;
-}
-
-struct ast * newid(double d, int datatype, char *name, int dln, int ln) {
-	struct idval *a = (struct idval *)malloc(sizeof(struct idval));
-	a->nodetype = 'I';
-	a->datatype = datatype;
-	a->val = d;
-	strcpy(a->name, name);
-	a->decl_lineno = dln;
-	a->lineno = ln;
-	return (struct ast *)a;
-}
+struct ast * newast(int, struct ast *, struct ast *);
+struct ast * newnum(double, int);
+struct ast * newid(double, int, char *, int, int);
 
 
-#line 176 "parser.tab.c" /* yacc.c:339  */
+#line 153 "parser.tab.c" /* yacc.c:339  */
 
 # ifndef YY_NULLPTR
 #  if defined __cplusplus && 201103L <= __cplusplus
@@ -246,14 +223,14 @@ extern int yydebug;
 
 union YYSTYPE
 {
-#line 112 "parser.y" /* yacc.c:355  */
+#line 90 "parser.y" /* yacc.c:355  */
 
 	int i;
 	double d;
 	char *s;
 	struct ast *a;
 
-#line 257 "parser.tab.c" /* yacc.c:355  */
+#line 234 "parser.tab.c" /* yacc.c:355  */
 };
 
 typedef union YYSTYPE YYSTYPE;
@@ -284,7 +261,7 @@ int yyparse (void);
 
 /* Copy the second part of user declarations.  */
 
-#line 288 "parser.tab.c" /* yacc.c:358  */
+#line 265 "parser.tab.c" /* yacc.c:358  */
 
 #ifdef short
 # undef short
@@ -586,12 +563,12 @@ static const yytype_uint8 yytranslate[] =
   /* YYRLINE[YYN] -- Source line where rule number YYN was defined.  */
 static const yytype_uint16 yyrline[] =
 {
-       0,   152,   152,   153,   154,   155,   158,   209,   213,   212,
-     303,   306,   307,   310,   311,   312,   315,   423,   429,   437,
-     438,   441,   442,   445,   446,   447,   448,   497,   498,   499,
-     502,   505,   506,   509,   510,   514,   513,   539,   540,   564,
-     567,   568,   569,   570,   571,   574,   647,   650,   675,   701,
-     727,   752,   753,   756,   757,   758,   759,   760,   816
+       0,   130,   130,   131,   132,   133,   136,   192,   196,   195,
+     292,   295,   296,   299,   300,   301,   304,   416,   422,   430,
+     431,   434,   435,   438,   439,   440,   441,   490,   491,   492,
+     495,   498,   499,   502,   503,   507,   506,   530,   531,   553,
+     556,   557,   558,   559,   560,   563,   634,   637,   662,   688,
+     714,   739,   740,   743,   744,   745,   746,   747,   801
 };
 #endif
 
@@ -1531,43 +1508,52 @@ yyreduce:
   switch (yyn)
     {
         case 6:
-#line 159 "parser.y" /* yacc.c:1646  */
+#line 137 "parser.y" /* yacc.c:1646  */
     {
-					bool redeclared = false;
-
-					t_val = ((type[type_indicator++] == 1) ? "int" : "float");
+					t_val = type[type_indicator++];
 					type_indicator %= 2;
-					t_ret = ((type[type_indicator] == 1) ? "int" : "float");
+					t_ret = type[type_indicator];
 					
 					temp = gtable;
 					found = false;
-					while(temp != NULL) {
-						if(strcmp(temp->name, yylval.s) ==  0 && temp->declared) {
+					
+					// check for function redeclaration
+					while(temp != NULL) {	// search in the global table
+
+						if(strcmp(temp->name, (yyvsp[-4].s)) == 0 && temp->declared) {
 							
+							found = true; // function redeclared
+							printf("function %s %s(%s) declared in line %d\n", 
+									data_type[t_ret], (yyvsp[-4].s), data_type[t_val], yylineno);
+
 							if(temp->ret_type != t_ret || temp->val_type != t_val) {
 
 								printf("ERROR: redeclaring %s with different \
-									signature in line %d.\n", yylval, yylineno);
+											signature in line %d.\n", (yyvsp[-4].s), yylineno);
 
-								redeclared = true;	
 								break;
 							}
-							found = true;
+
 							break;
 						}
+
 						temp = temp->next;
 					}
-					if(!found && !redeclared) { /* no function redeclaration */
+
+					if(!found) {	/* function is not redeclared */
+
 						temp = (sym *)malloc(sizeof(sym));
-						strcpy(temp->name, yylval.s);
-						strcpy(temp->ret_type, t_ret);
-						strcpy(temp->val_type, t_val);
+						
+						strcpy(temp->name, (yyvsp[-4].s));
+						temp->ret_type = t_ret;
+						temp->val_type = t_val;
 						temp->declared = true;
 						temp->implemented = false;
 						temp->called = false;
 						temp->decl_lineno = yylineno;
 		
 						/* add to the head of the gtable list */
+						/* CAUTION**: test if gtable is empty */
 						if(gtable != NULL) {
 							temp->next = gtable->next;
 							gtable->next = temp;
@@ -1577,58 +1563,64 @@ yyreduce:
 							gtable = temp;
 						}
 					}
-
-					if(!redeclared)
-						printf("function %s %s(%s) declared in line %d\n", 
-									t_ret, yylval, t_val, yylineno);
 				}
-#line 1586 "parser.tab.c" /* yacc.c:1646  */
+#line 1568 "parser.tab.c" /* yacc.c:1646  */
     break;
 
   case 7:
-#line 209 "parser.y" /* yacc.c:1646  */
+#line 192 "parser.y" /* yacc.c:1646  */
     {yyerrok; }
-#line 1592 "parser.tab.c" /* yacc.c:1646  */
+#line 1574 "parser.tab.c" /* yacc.c:1646  */
     break;
 
   case 8:
-#line 213 "parser.y" /* yacc.c:1646  */
+#line 196 "parser.y" /* yacc.c:1646  */
     {
-						bool bad_sig = false;
-
-						t_val = ((type[type_indicator] == 1) ? "int" : "float");
-						t_ret = ((type[(type_indicator + 1) % 2] == 1) ? "int" : "float");
+						bool mismatched = false;
+						
+						t_val = type[type_indicator++];
+						type_indicator %= 2;
+						t_ret = type[type_indicator];
 
 						temp = gtable;
 						found = false;
 
-						while(temp != NULL) { // check if mismatched with declaration
-							if((strcmp(temp->name, second_to_last_id) == 0) && (temp->declared)) {
-								if(strcmp(temp->ret_type, t_ret) != 0 || strcmp(temp->val_type, t_val) != 0) {
+						// check if function definition mismatched with declaration
+						while(temp != NULL) {	// search for function decl in global table
+
+							if((strcmp(temp->name, (yyvsp[-4].s)) == 0) && (temp->declared)) {
+								
+								found = true; // function decl found
+
+								if(temp->ret_type != t_ret || temp->val_type != t_val) {	
+									// mismatched with decl
+									
+									mismatched = true;
 									printf("ERROR: definition(line: %d) with mismatched \ 
 											signature(line %d) \n", yylineno, temp->decl_lineno);
-									bad_sig = true;
 									break;
 								}
-								temp->implemented = true;
-								found = true;
+								
 								break;
-							}
+							} //declaration found
+
 							temp = temp->next;
 						}
 
 						if(!found) { // no declaration
 
 							temp = (sym *)malloc(sizeof(sym));
-							strcpy(temp->name, second_to_last_id); /* function name */
-							strcpy(temp->ret_type, t_ret);
-							strcpy(temp->val_type, t_val);
+
+							strcpy(temp->name, (yyvsp[-4].s));
+							temp->ret_type = t_ret;
+							temp->val_type = t_val;
 							temp->declared = false;
 							temp->implemented = true;
 							temp->called = false;
 							temp->def_lineno = yylineno;
 
 							/* add to the head of the gtable list */
+							/* CAUTION**: test if gtable is empty */
 							if(gtable != NULL) {
 								temp->next = gtable->next;
 								gtable->next = temp;
@@ -1638,24 +1630,21 @@ yyreduce:
 								gtable = temp;
 							}
 						}
-						
-						if(!bad_sig) { // function decl exists and matches the definition
-							
-							printf("function %s defined in line %d\n", second_to_last_id, yylineno);
+
+						if(!mismatched) {
+
+							printf("function %s defined in line %d\n", (yyvsp[-4].s), yylineno);
 							temp->implemented = true;
 							temp->def_lineno = yylineno;
-							global = false;
 
-							/* add function parameter to local table */
+							global = false;	// entered local scope
+
+							/* ==== add function parameter to local table ==== */
 						
 							temp = (sym *)malloc(sizeof(sym));
-							strcpy(temp->name, yylval.s);
 
-							if(type[type_indicator] == 1)
-								strcpy(temp->val_type, "int");
-							else
-								strcpy(temp->val_type, "float");
-
+							strcpy(temp->name, (yyvsp[-1].s));
+							temp->val_type = t_val;
 							temp->isGlobal = false;
 							temp->lineno = yylineno;
 						
@@ -1665,33 +1654,33 @@ yyreduce:
 
 							ltable = temp;
 
-							(global) ? printf("Global ") : printf("Local ");
-							(type[type_indicator] == 1) ? printf("int variable ") : printf("float variable ");
-							printf("%s declared in line %d\n", yylval, yylineno);
+							printf("Local %s variable %s declared in line %d\n", 
+												data_type[t_val], (yyvsp[-1].s), yylineno);
 						}
 					}
-#line 1674 "parser.tab.c" /* yacc.c:1646  */
+#line 1662 "parser.tab.c" /* yacc.c:1646  */
     break;
 
   case 9:
-#line 291 "parser.y" /* yacc.c:1646  */
+#line 280 "parser.y" /* yacc.c:1646  */
     {
-						global = true;
+						global = true; // local scope ended
 						
-						/* free up memory */
+						/* free up memory for local table */
 						while(ltable != NULL) {
 							temp = ltable;
 							ltable = ltable->next;
 							free(temp);
 						}
 					}
-#line 1689 "parser.tab.c" /* yacc.c:1646  */
+#line 1677 "parser.tab.c" /* yacc.c:1646  */
     break;
 
   case 16:
-#line 316 "parser.y" /* yacc.c:1646  */
+#line 305 "parser.y" /* yacc.c:1646  */
     {
-				while(head != NULL) {
+				// search for variable redeclaration
+				while(head != NULL) { // head of var_list is not null
 
 					found = false;
 
@@ -1702,9 +1691,9 @@ yyreduce:
 
 						while(temp != NULL) { /* loop through local symbol table */
 
-							if(strcmp(temp->name, head->name) == 0) {
+							if(strcmp(temp->name, head->name) == 0) { // redeclaration found
 
-								if(strcmp(temp->val_type, head->val_type) == 0) {
+								if(temp->val_type == head->val_type) {
 									printf("ERROR: Redeclaring local variable %s in line %d.\n", 
 																		temp->name, yylineno);
 								}
@@ -1712,6 +1701,7 @@ yyreduce:
 									printf("ERROR: Redeclaring local variable %s with different \
 													type in line %d.\n", temp->name, yylineno);
 								}
+
 								found = true;
 								break;
 							}
@@ -1726,8 +1716,9 @@ yyreduce:
 
 						while(temp != NULL) { /* loop for global symbol table */
 
-							if(strcmp(temp->name, head->name) == 0 && !(temp->declared) && !(temp->implemented)) {
-								if(strcmp(temp->val_type, head->val_type) == 0) {
+							if(strcmp(temp->name, head->name) == 0 && 
+									!(temp->declared) && !(temp->implemented)) {
+								if(temp->val_type == head->val_type) {
 									printf("ERROR: Redeclaring global variable %s in line %d.\n", 
 																		temp->name, yylineno);
 								}
@@ -1740,7 +1731,8 @@ yyreduce:
 								break;
 							}
 							/* funcAsVar*/
-							if(strcmp(temp->name, head->name) == 0 && (temp->declared || temp->implemented)) {
+							if(strcmp(temp->name, head->name) == 0 && 
+									(temp->declared || temp->implemented)) {
 								
 								printf("ERROR: Redeclaring a function as a global variable %s \
 														in line %d.\n", temp->name, yylineno);
@@ -1755,11 +1747,11 @@ yyreduce:
 
 					if(!found) { /* no redeclaration */
 
-						if(head->isGlobal) printf("Global "); 
-						else		  printf("Local ");
+						global ? printf("Global ") : printf("Local ");
 						printf("%s variable %s declared in line %d.\n", 
-										head->val_type, head->name, head->lineno);
-
+										data_type[head->val_type], head->name, head->lineno);
+						
+						// add to corresponding table
 						if(global) { /* add to gtable */
 							temp = head;
 							head = head->next;
@@ -1785,7 +1777,7 @@ yyreduce:
 							}
 						}
 					}
-					else { /* found redeclaration, release memory */
+					else { /* found redeclaration, release memory for this variable */
 						temp = head;
 						head = head->next;
 						free(temp);
@@ -1795,31 +1787,31 @@ yyreduce:
 				temp = head = tail = NULL;
 
 			}
-#line 1799 "parser.tab.c" /* yacc.c:1646  */
+#line 1791 "parser.tab.c" /* yacc.c:1646  */
     break;
 
   case 17:
-#line 424 "parser.y" /* yacc.c:1646  */
+#line 417 "parser.y" /* yacc.c:1646  */
     {	 
 				type_indicator++;
 				type_indicator %= 2;	
-				type[type_indicator] = 1; 
+				type[type_indicator] = TYPE_INT; 
 			}
-#line 1809 "parser.tab.c" /* yacc.c:1646  */
+#line 1801 "parser.tab.c" /* yacc.c:1646  */
     break;
 
   case 18:
-#line 430 "parser.y" /* yacc.c:1646  */
+#line 423 "parser.y" /* yacc.c:1646  */
     {
 				type_indicator++;
 				type_indicator %= 2;	
-				type[type_indicator] = 2;
+				type[type_indicator] = TYPE_FLOAT;
 			}
-#line 1819 "parser.tab.c" /* yacc.c:1646  */
+#line 1811 "parser.tab.c" /* yacc.c:1646  */
     break;
 
   case 26:
-#line 449 "parser.y" /* yacc.c:1646  */
+#line 442 "parser.y" /* yacc.c:1646  */
     {
 						while(head != NULL) { /* loop for var_list */
 							
@@ -1831,7 +1823,7 @@ yyreduce:
 								while(temp != NULL) { /* loop for local symbol table */
 									if(strcmp(head->name, temp->name) == 0) {
 										printf("Local %s variable %s declared in line %d used in line %d.\n", 
-														temp->val_type, temp->name, temp->lineno, yylineno);
+														data_type[temp->val_type], temp->name, temp->lineno, yylineno);
 										found = true;
 										break;
 									}
@@ -1843,7 +1835,7 @@ yyreduce:
 								while(temp != NULL) { /* loop for global symbol table */
 									if(strcmp(head->name, temp->name) == 0 && !(temp->declared) && !(temp->implemented)) {
 										printf("Global %s variable %s declared in line %d used in line %d.\n", 
-														temp->val_type, temp->name, temp->lineno, yylineno);
+														data_type[temp->val_type], temp->name, temp->lineno, yylineno);
 										found = true;
 										break;
 									}
@@ -1856,9 +1848,9 @@ yyreduce:
 							}
 							if(!found) {
 								if(funcAsVar)
-									printf("ERROR line %d: function %s used as a variable.\n", yylineno, yylval);
+									printf("ERROR line %d: function %s used as a variable.\n", yylineno, head->name);
 								else
-									printf("ERROR line %d: variable %s not declared.\n", yylineno, yylval);
+									printf("ERROR line %d: variable %s not declared.\n", yylineno, head->name);
 							}
 							
 							temp = head;
@@ -1868,20 +1860,18 @@ yyreduce:
 						} /* var_list loop */
 						head = tail = NULL;
 					}
-#line 1872 "parser.tab.c" /* yacc.c:1646  */
+#line 1864 "parser.tab.c" /* yacc.c:1646  */
     break;
 
   case 35:
-#line 514 "parser.y" /* yacc.c:1646  */
+#line 507 "parser.y" /* yacc.c:1646  */
     {
 					if(head == NULL) {
 						head = (sym *)malloc(sizeof(sym));
 
-						strcpy(head->name, yylval.s);
+						strcpy(head->name, (yyvsp[0].s));
 
-						if(type[type_indicator] == 1)	strcpy(head->val_type, "int");
-						else				strcpy(head->val_type, "float");
-						
+						head->val_type = type[type_indicator];
 						head->isGlobal = global;
 						head->lineno = yylineno;
 
@@ -1895,21 +1885,19 @@ yyreduce:
 						printf("ERROR line %d: head is not NULL.\n", yylineno);
 					}
 				}
-#line 1899 "parser.tab.c" /* yacc.c:1646  */
+#line 1889 "parser.tab.c" /* yacc.c:1646  */
     break;
 
   case 38:
-#line 541 "parser.y" /* yacc.c:1646  */
+#line 532 "parser.y" /* yacc.c:1646  */
     {	
 						if(tail != NULL) {
 							tail->next = (sym *)malloc(sizeof(sym));
 							tail = tail->next;
 
-							strcpy(tail->name, yylval.s);
+							strcpy(tail->name, (yyvsp[0].s));
 
-							if(type[type_indicator] == 1)	strcpy(tail->val_type, "int");
-							else				strcpy(tail->val_type, "float");
-
+							tail->val_type = type[type_indicator];
 							tail->isGlobal = global;
 							tail->lineno = yylineno;
 
@@ -1921,11 +1909,11 @@ yyreduce:
 							printf("ERROR line %d: tail is NULL.\n", yylineno);
 						}
 					}
-#line 1925 "parser.tab.c" /* yacc.c:1646  */
+#line 1913 "parser.tab.c" /* yacc.c:1646  */
     break;
 
   case 45:
-#line 575 "parser.y" /* yacc.c:1646  */
+#line 564 "parser.y" /* yacc.c:1646  */
     {
 					funcAsVar = false;
 					found = false;
@@ -1935,13 +1923,12 @@ yyreduce:
 						while(temp != NULL) { /* local symbol table */
 							if(strcmp(temp->name, (yyvsp[-2].s)) == 0) {
 								printf("Local %s variable %s declared in line %d used in line %d.\n", 
-									temp->val_type, temp->name, temp->lineno, yylineno);
+										data_type[temp->val_type], temp->name, temp->lineno, yylineno);
 
 								// AST =======================================================================
 
-								if( ((yyvsp[0].a)->datatype == TYPE_INT && !strcmp(temp->val_type, "float")) || 
-										((yyvsp[0].a)->datatype == TYPE_FLOAT && !strcmp(temp->val_type, "int")) ) {
-									
+								if((yyvsp[0].a)->datatype != temp->val_type) {
+								
 									printf("ERROR: Value of wrong type assigned to %s variable %s. Line: %d.\n",
 																		temp->val_type, temp->name, yylineno);
 									(yyval.a) = NULL;
@@ -1966,8 +1953,7 @@ yyreduce:
 
 								// AST =======================================================================
 
-								if( ((yyvsp[0].a)->datatype == TYPE_INT && !strcmp(temp->val_type, "float")) || 
-										((yyvsp[0].a)->datatype == TYPE_FLOAT && !strcmp(temp->val_type, "int")) ) {
+								if((yyvsp[0].a)->datatype != temp->val_type) {
 									
 									printf("ERROR: Value of wrong type assigned to %s variable %s. Line: %d.\n",
 																		temp->val_type, temp->name, yylineno);
@@ -1990,19 +1976,19 @@ yyreduce:
 					}
 					if(!found) {
 						if(funcAsVar)
-							printf("ERROR line %d: function %s used as a variable.\n", yylineno, yylval);
+							printf("ERROR line %d: function %s used as a variable.\n", yylineno, (yyvsp[-2].s));
 						else {
-							printf("ERROR line %d: variable %s not declared.\n", yylineno, yylval);
+							printf("ERROR line %d: variable %s not declared.\n", yylineno, (yyvsp[-2].s));
 							// AST
 							(yyval.a) = NULL;
 						}
 					}
 				}
-#line 2002 "parser.tab.c" /* yacc.c:1646  */
+#line 1988 "parser.tab.c" /* yacc.c:1646  */
     break;
 
   case 47:
-#line 651 "parser.y" /* yacc.c:1646  */
+#line 638 "parser.y" /* yacc.c:1646  */
     { 
 					(yyval.a) = newast('+', (yyvsp[-2].a), (yyvsp[0].a));
 
@@ -2027,11 +2013,11 @@ yyreduce:
 						}
 					}
 				}
-#line 2031 "parser.tab.c" /* yacc.c:1646  */
+#line 2017 "parser.tab.c" /* yacc.c:1646  */
     break;
 
   case 48:
-#line 676 "parser.y" /* yacc.c:1646  */
+#line 663 "parser.y" /* yacc.c:1646  */
     {
 					(yyval.a) = newast('-', (yyvsp[-2].a), (yyvsp[0].a));
 
@@ -2057,11 +2043,11 @@ yyreduce:
 
 					}
 				}
-#line 2061 "parser.tab.c" /* yacc.c:1646  */
+#line 2047 "parser.tab.c" /* yacc.c:1646  */
     break;
 
   case 49:
-#line 702 "parser.y" /* yacc.c:1646  */
+#line 689 "parser.y" /* yacc.c:1646  */
     {
 					(yyval.a) = newast('*', (yyvsp[-2].a), (yyvsp[0].a));
 
@@ -2087,11 +2073,11 @@ yyreduce:
 
 					}
 				}
-#line 2091 "parser.tab.c" /* yacc.c:1646  */
+#line 2077 "parser.tab.c" /* yacc.c:1646  */
     break;
 
   case 50:
-#line 728 "parser.y" /* yacc.c:1646  */
+#line 715 "parser.y" /* yacc.c:1646  */
     {
 					(yyval.a) = newast('/', (yyvsp[-2].a), (yyvsp[0].a));
 
@@ -2116,35 +2102,35 @@ yyreduce:
 						}
 					}
 				}
-#line 2120 "parser.tab.c" /* yacc.c:1646  */
+#line 2106 "parser.tab.c" /* yacc.c:1646  */
     break;
 
   case 51:
-#line 752 "parser.y" /* yacc.c:1646  */
+#line 739 "parser.y" /* yacc.c:1646  */
     { (yyval.a) = newast('M', (yyvsp[0].a), NULL); }
-#line 2126 "parser.tab.c" /* yacc.c:1646  */
+#line 2112 "parser.tab.c" /* yacc.c:1646  */
     break;
 
   case 53:
-#line 756 "parser.y" /* yacc.c:1646  */
+#line 743 "parser.y" /* yacc.c:1646  */
     { (yyval.a) = newnum((yyvsp[0].i), TYPE_INT); }
-#line 2132 "parser.tab.c" /* yacc.c:1646  */
+#line 2118 "parser.tab.c" /* yacc.c:1646  */
     break;
 
   case 54:
-#line 757 "parser.y" /* yacc.c:1646  */
+#line 744 "parser.y" /* yacc.c:1646  */
     { (yyval.a) = newnum((yyvsp[0].d), TYPE_FLOAT); }
-#line 2138 "parser.tab.c" /* yacc.c:1646  */
+#line 2124 "parser.tab.c" /* yacc.c:1646  */
     break;
 
   case 56:
-#line 759 "parser.y" /* yacc.c:1646  */
+#line 746 "parser.y" /* yacc.c:1646  */
     { (yyval.a) = (yyvsp[-1].a); }
-#line 2144 "parser.tab.c" /* yacc.c:1646  */
+#line 2130 "parser.tab.c" /* yacc.c:1646  */
     break;
 
   case 57:
-#line 761 "parser.y" /* yacc.c:1646  */
+#line 748 "parser.y" /* yacc.c:1646  */
     {
 					found = false;
 					funcAsVar = false;
@@ -2152,13 +2138,12 @@ yyreduce:
 					if(ltable != NULL) {
 						temp = ltable;
 						while(temp != NULL) {
-							if(strcmp(temp->name, yylval.s) == 0) {
+							if(strcmp(temp->name, (yyvsp[0].s)) == 0) {
 								printf("Local %s variable %s declared in line %d used in line %d.\n", 
-												temp->val_type, temp->name, temp->lineno, yylineno);
+												data_type[temp->val_type], temp->name, temp->lineno, yylineno);
 								
 								// AST TODO: temporary ID value
-								(yyval.a) = newid(0.0, (strcmp(temp->val_type, "int") ? TYPE_FLOAT : TYPE_INT), 
-																temp->name, temp->lineno, yylineno);
+								(yyval.a) = newid(0.0, temp->val_type, temp->name, temp->lineno, yylineno);
 
 								found = true;
 								break;
@@ -2169,18 +2154,17 @@ yyreduce:
 					if(found == false && gtable != NULL) {
 						temp = gtable;
 						while(temp != NULL) {
-							if(strcmp(temp->name, yylval.s) == 0 && !(temp->declared) && !(temp->implemented)) {
+							if(strcmp(temp->name, (yyvsp[0].s)) == 0 && !(temp->declared) && !(temp->implemented)) {
 								printf("Global %s variable %s declared in line %d used in line %d.\n", 
-												temp->val_type, temp->name, temp->lineno, yylineno);
+												data_type[temp->val_type], temp->name, temp->lineno, yylineno);
 								
 								// AST TODO: temporary ID value
-								(yyval.a) = newid(0.0, (strcmp(temp->val_type, "int") ? TYPE_FLOAT : TYPE_INT), 
-																temp->name, temp->lineno, yylineno);
+								(yyval.a) = newid(0.0, temp->val_type, temp->name, temp->lineno, yylineno);
 
 								found = true;
 								break;
 							}
-							if(strcmp(temp->name, yylval.s) == 0 && (temp->declared || temp->implemented)) {
+							if(strcmp(temp->name, (yyvsp[0].s)) == 0 && (temp->declared || temp->implemented)) {
 								funcAsVar = true;
 								// AST
 								(yyval.a) = NULL;
@@ -2190,19 +2174,19 @@ yyreduce:
 					}
 					if(!found) {
 						if(funcAsVar)
-							printf("ERROR line %d: function %s used as a variable.\n", yylineno, yylval);
+							printf("ERROR line %d: function %s used as a variable.\n", yylineno, (yyvsp[0].s));
 						else {
-							printf("ERROR line %d: variable %s not declared.\n", yylineno, yylval);
+							printf("ERROR line %d: variable %s not declared.\n", yylineno, (yyvsp[0].s));
 							// AST
 							(yyval.a) = NULL;
 						}
 					}
 				}
-#line 2202 "parser.tab.c" /* yacc.c:1646  */
+#line 2186 "parser.tab.c" /* yacc.c:1646  */
     break;
 
   case 58:
-#line 817 "parser.y" /* yacc.c:1646  */
+#line 802 "parser.y" /* yacc.c:1646  */
     {
 						varAsFunc = false;
 						found = false;
@@ -2215,7 +2199,7 @@ yyreduce:
 																		yylineno, temp->name);
 
 									// AST
-									(yyval.a) = NULL;
+									(yyval.a) = newnum(0.0, TYPE_INVALID);
 
 									found = true;
 									break;
@@ -2232,10 +2216,9 @@ yyreduce:
 										printf("Function %s defined in line %d used in line %d.\n", 
 															temp->name, temp->def_lineno, yylineno);
 										// AST ==================================================================
-										(yyval.a) = newnum(0.0, (strcmp(temp->ret_type, "int") ? TYPE_FLOAT : TYPE_INT));
+										(yyval.a) = newnum(0.0, temp->ret_type);
 
-										if( ((yyvsp[-1].a)->datatype == TYPE_INT && !strcmp(temp->val_type, "float")) || 
-												((yyvsp[-1].a)->datatype == TYPE_FLOAT && !strcmp(temp->val_type, "int")) ) {
+										if((yyvsp[-1].a)->datatype != temp->val_type) {
 											printf("ERROR: Function %s called with wrong parameter type. Line: %d.\n",
 																						temp->name, yylineno);
 										}
@@ -2248,10 +2231,9 @@ yyreduce:
 										printf("Function %s declared in line %d used in line %d.\n", 
 															temp->name, temp->decl_lineno, yylineno);
 										// AST ==================================================================
-										(yyval.a) = newnum(0.0, (strcmp(temp->ret_type, "int") ? TYPE_FLOAT : TYPE_INT));
+										(yyval.a) = newnum(0.0, temp->ret_type);
 										
-										if( ((yyvsp[-1].a)->datatype == TYPE_INT && !strcmp(temp->val_type, "float")) || 
-												((yyvsp[-1].a)->datatype == TYPE_FLOAT && !strcmp(temp->val_type, "int")) ) {
+										if((yyvsp[-1].a)->datatype != temp->val_type) {
 											printf("ERROR: Function %s called with wrong parameter type. Line: %d.\n",
 																						temp->name, yylineno);
 										}
@@ -2262,27 +2244,27 @@ yyreduce:
 									else {
 										varAsFunc = true;
 										//AST
-										(yyval.a) = NULL;
+										(yyval.a) = newnum(0.0, TYPE_INVALID);
 									}
 								}
 								temp = temp->next;
 							}
 							if(!found) {
 								if(varAsFunc)
-									printf("ERROR line %d: variable %s used as a function.\n", yylineno, yylval);
+									printf("ERROR line %d: variable %s used as a function.\n", yylineno, (yyvsp[-3].s));
 								else {
-									printf("ERROR line %d: function %s is not declared.\n", yylineno, yylval);
+									printf("ERROR line %d: function %s is not declared.\n", yylineno, (yyvsp[-3].s));
 									// AST
-									(yyval.a) = NULL;
+									(yyval.a) = newnum(0.0, TYPE_INVALID);
 								}
 							}
 						}
 					}
-#line 2282 "parser.tab.c" /* yacc.c:1646  */
+#line 2264 "parser.tab.c" /* yacc.c:1646  */
     break;
 
 
-#line 2286 "parser.tab.c" /* yacc.c:1646  */
+#line 2268 "parser.tab.c" /* yacc.c:1646  */
       default: break;
     }
   /* User semantic actions sometimes alter yychar, and that requires
@@ -2517,7 +2499,7 @@ yyreturn:
 #endif
   return yyresult;
 }
-#line 894 "parser.y" /* yacc.c:1906  */
+#line 877 "parser.y" /* yacc.c:1906  */
 
 
 main(int argc, char **argv)
@@ -2538,3 +2520,35 @@ yyerror(char *s)
 	syntax_error = true;
 	fprintf(stderr, "ERROR: %s, line: %d\n", s, yylineno);
 }
+
+struct ast * newast(int nodetype, struct ast *l, struct ast *r) {
+	struct ast *a = (struct ast *)malloc(sizeof(struct ast));
+	a->nodetype = nodetype;
+	if(nodetype == 'M')
+		a->datatype = l->datatype;
+	else
+		a->datatype = ( (l->datatype == r->datatype) ? l->datatype : TYPE_INVALID );
+	a->l = l;
+	a->r = r;
+	return a;
+}
+
+struct ast * newnum(double d, int datatype) {
+	struct numval *a = (struct numval *)malloc(sizeof(struct numval));
+	a->nodetype = 'N';
+	a->datatype = datatype;
+	a->val = d;
+	return (struct ast *)a;
+}
+
+struct ast * newid(double d, int datatype, char *name, int dln, int ln) {
+	struct idval *a = (struct idval *)malloc(sizeof(struct idval));
+	a->nodetype = 'I';
+	a->datatype = datatype;
+	a->val = d;
+	strcpy(a->name, name);
+	a->decl_lineno = dln;
+	a->lineno = ln;
+	return (struct ast *)a;
+}
+

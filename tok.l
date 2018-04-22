@@ -14,34 +14,7 @@
 #include <stdio.h>
 #include "parser.tab.h"
 
-/* 
-from table 4: I changed some of the token numbers and names
-	1:	int:	int
-	2:	float:	float
-	3:	if:	if
-	4:	else:	else
-	5:	while:	while
-	6:	return:	return
-	7:	read:	read
-	8:	write:	write
-	10:	ID:	[a-zA-Z_][a-zA-Z_0-9]*
-	11:	op:	+|-|*|/|=
-	15:	LPAR:	(
-	16:	RPAR:	)
-	19:	LBRACE:	{
-	20:	RBRACE:	}
-	21:	semi:	;
-	22:	comma:	,
-	23:	int:	[0-9]+
-	24:	float:	[0-9]+\.[0-9]+
-	99:	WS:	[ \t]
-	100:	newline:\n
-	101:	end-of-file:
-END from table 4 
-*/
 
-
-char op_name[20];
 int line_no = 1;
 char *skip;
 int mylength;
@@ -49,9 +22,6 @@ int mylength;
 char second_to_last_id[50];
 char last_id[50];
 
-/*
-#define save_return(x) {strncpy(op_name,yytext,19); op_name[19]='\0'; yylval.value=x-ADD; return(x);}
-*/
 
 %}
 
@@ -102,6 +72,7 @@ char last_id[50];
 
 [0-9]+	{ 
 			for (mylength = yyleng, skip = yytext; *skip == '0'; skip++, mylength--);
+
 			if (mylength > 6) {
 				fprintf(stderr,
 				  "Suspiciously large interger literal %s in line %d. Replacing by 0.\n",
