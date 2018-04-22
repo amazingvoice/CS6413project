@@ -585,8 +585,8 @@ static const yytype_uint16 yyrline[] =
      298,   301,   302,   305,   306,   307,   310,   418,   424,   432,
      433,   436,   437,   440,   441,   442,   443,   492,   493,   494,
      497,   500,   501,   504,   505,   509,   508,   534,   535,   559,
-     562,   563,   564,   565,   566,   569,   620,   623,   624,   625,
-     626,   627,   628,   631,   632,   633,   634,   635,   691
+     562,   563,   564,   565,   566,   569,   642,   645,   671,   672,
+     673,   674,   675,   678,   679,   680,   681,   682,   738
 };
 #endif
 
@@ -1932,8 +1932,19 @@ yyreduce:
 								printf("Local %s variable %s declared in line %d used in line %d.\n", 
 									temp->val_type, temp->name, temp->lineno, yylineno);
 
-								// AST
-								(yyval.a) = (yyvsp[0].a);
+								// AST =======================================================================
+
+								if( ((yyvsp[0].a)->datatype == TYPE_INT && !strcmp(temp->val_type, "float")) || 
+										((yyvsp[0].a)->datatype == TYPE_FLOAT && !strcmp(temp->val_type, "int")) ) {
+									
+									printf("ERROR: Value of wrong type assigned to %s variable %s. Line: %d.\n",
+																		temp->val_type, temp->name, yylineno);
+									(yyval.a) = NULL;
+								}
+								else {
+									(yyval.a) = (yyvsp[0].a);
+								}
+								// ===========================================================================
 
 								found = true;
 								break;
@@ -1948,8 +1959,19 @@ yyreduce:
 								printf("Global %s variable %s declared in line %d used in line %d.\n", 
 									temp->val_type, temp->name, temp->lineno, yylineno);
 
-								// AST
-								(yyval.a) = (yyvsp[0].a);
+								// AST =======================================================================
+
+								if( ((yyvsp[0].a)->datatype == TYPE_INT && !strcmp(temp->val_type, "float")) || 
+										((yyvsp[0].a)->datatype == TYPE_FLOAT && !strcmp(temp->val_type, "int")) ) {
+									
+									printf("ERROR: Value of wrong type assigned to %s variable %s. Line: %d.\n",
+																		temp->val_type, temp->name, yylineno);
+									(yyval.a) = NULL;
+								}
+								else {
+									(yyval.a) = (yyvsp[0].a);
+								}
+								// ===========================================================================
 
 								found = true;
 								break;
@@ -1971,59 +1993,83 @@ yyreduce:
 						}
 					}
 				}
-#line 1975 "parser.tab.c" /* yacc.c:1646  */
+#line 1997 "parser.tab.c" /* yacc.c:1646  */
     break;
 
   case 47:
-#line 623 "parser.y" /* yacc.c:1646  */
-    { (yyval.a) = newast('+', (yyvsp[-2].a), (yyvsp[0].a)); }
-#line 1981 "parser.tab.c" /* yacc.c:1646  */
+#line 646 "parser.y" /* yacc.c:1646  */
+    { 
+					if((yyvsp[-2].a)->datatype == (yyvsp[0].a)->datatype)
+						(yyval.a) = newast('+', (yyvsp[-2].a), (yyvsp[0].a));
+					else { // error: mixed types in arithmetic op
+						(yyval.a) = NULL;
+						if((yyvsp[-2].a)->nodetype == 'I') {
+							struct idval *temp = (struct idval *)(yyvsp[-2].a);
+							printf("ERROR: Adding %s \"%s\" (declared on line %d) to ", 
+									(temp->datatype == TYPE_INT ? "int" : "float"), temp->name, temp->decl_lineno);
+						}
+						else {
+							printf("ERROR: Adding %s value to ", ((yyvsp[-2].a)->datatype == TYPE_INT ? "int" : "float"));
+						}
+
+						if((yyvsp[0].a)->nodetype == 'I') {
+							struct idval *temp = (struct idval *)(yyvsp[0].a);
+							printf("%s \"%s\" (declared on line %d). Line: %d\n", 
+								(temp->datatype == TYPE_INT ? "int" : "float"), temp->name, temp->decl_lineno, yylineno);
+						}
+						else {
+							printf("%s value. Line: %d\n", ((yyvsp[0].a)->datatype == TYPE_INT ? "int" : "float"), yylineno);
+						}
+
+					}
+				}
+#line 2027 "parser.tab.c" /* yacc.c:1646  */
     break;
 
   case 48:
-#line 624 "parser.y" /* yacc.c:1646  */
+#line 671 "parser.y" /* yacc.c:1646  */
     { (yyval.a) = newast('-', (yyvsp[-2].a), (yyvsp[0].a)); }
-#line 1987 "parser.tab.c" /* yacc.c:1646  */
+#line 2033 "parser.tab.c" /* yacc.c:1646  */
     break;
 
   case 49:
-#line 625 "parser.y" /* yacc.c:1646  */
+#line 672 "parser.y" /* yacc.c:1646  */
     { (yyval.a) = newast('*', (yyvsp[-2].a), (yyvsp[0].a)); }
-#line 1993 "parser.tab.c" /* yacc.c:1646  */
+#line 2039 "parser.tab.c" /* yacc.c:1646  */
     break;
 
   case 50:
-#line 626 "parser.y" /* yacc.c:1646  */
+#line 673 "parser.y" /* yacc.c:1646  */
     { (yyval.a) = newast('/', (yyvsp[-2].a), (yyvsp[0].a)); }
-#line 1999 "parser.tab.c" /* yacc.c:1646  */
+#line 2045 "parser.tab.c" /* yacc.c:1646  */
     break;
 
   case 51:
-#line 627 "parser.y" /* yacc.c:1646  */
+#line 674 "parser.y" /* yacc.c:1646  */
     { (yyval.a) = newast('M', (yyvsp[0].a), NULL); }
-#line 2005 "parser.tab.c" /* yacc.c:1646  */
+#line 2051 "parser.tab.c" /* yacc.c:1646  */
     break;
 
   case 53:
-#line 631 "parser.y" /* yacc.c:1646  */
+#line 678 "parser.y" /* yacc.c:1646  */
     { (yyval.a) = newnum((yyvsp[0].i), TYPE_INT); }
-#line 2011 "parser.tab.c" /* yacc.c:1646  */
+#line 2057 "parser.tab.c" /* yacc.c:1646  */
     break;
 
   case 54:
-#line 632 "parser.y" /* yacc.c:1646  */
+#line 679 "parser.y" /* yacc.c:1646  */
     { (yyval.a) = newnum((yyvsp[0].d), TYPE_FLOAT); }
-#line 2017 "parser.tab.c" /* yacc.c:1646  */
+#line 2063 "parser.tab.c" /* yacc.c:1646  */
     break;
 
   case 56:
-#line 634 "parser.y" /* yacc.c:1646  */
+#line 681 "parser.y" /* yacc.c:1646  */
     { (yyval.a) = (yyvsp[-1].a); }
-#line 2023 "parser.tab.c" /* yacc.c:1646  */
+#line 2069 "parser.tab.c" /* yacc.c:1646  */
     break;
 
   case 57:
-#line 636 "parser.y" /* yacc.c:1646  */
+#line 683 "parser.y" /* yacc.c:1646  */
     {
 					found = false;
 					funcAsVar = false;
@@ -2077,11 +2123,11 @@ yyreduce:
 						}
 					}
 				}
-#line 2081 "parser.tab.c" /* yacc.c:1646  */
+#line 2127 "parser.tab.c" /* yacc.c:1646  */
     break;
 
   case 58:
-#line 692 "parser.y" /* yacc.c:1646  */
+#line 739 "parser.y" /* yacc.c:1646  */
     {
 						varAsFunc = false;
 						found = false;
@@ -2157,11 +2203,11 @@ yyreduce:
 							}
 						}
 					}
-#line 2161 "parser.tab.c" /* yacc.c:1646  */
+#line 2207 "parser.tab.c" /* yacc.c:1646  */
     break;
 
 
-#line 2165 "parser.tab.c" /* yacc.c:1646  */
+#line 2211 "parser.tab.c" /* yacc.c:1646  */
       default: break;
     }
   /* User semantic actions sometimes alter yychar, and that requires
@@ -2396,7 +2442,7 @@ yyreturn:
 #endif
   return yyresult;
 }
-#line 769 "parser.y" /* yacc.c:1906  */
+#line 816 "parser.y" /* yacc.c:1906  */
 
 
 main(int argc, char **argv)

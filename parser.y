@@ -578,8 +578,19 @@ expr		:	ID OP_ASSIGN expr
 								printf("Local %s variable %s declared in line %d used in line %d.\n", 
 									temp->val_type, temp->name, temp->lineno, yylineno);
 
-								// AST
-								$$ = $3;
+								// AST =======================================================================
+
+								if( ($3->datatype == TYPE_INT && !strcmp(temp->val_type, "float")) || 
+										($3->datatype == TYPE_FLOAT && !strcmp(temp->val_type, "int")) ) {
+									
+									printf("ERROR: Value of wrong type assigned to %s variable %s. Line: %d.\n",
+																		temp->val_type, temp->name, yylineno);
+									$$ = NULL;
+								}
+								else {
+									$$ = $3;
+								}
+								// ===========================================================================
 
 								found = true;
 								break;
@@ -594,8 +605,19 @@ expr		:	ID OP_ASSIGN expr
 								printf("Global %s variable %s declared in line %d used in line %d.\n", 
 									temp->val_type, temp->name, temp->lineno, yylineno);
 
-								// AST
-								$$ = $3;
+								// AST =======================================================================
+
+								if( ($3->datatype == TYPE_INT && !strcmp(temp->val_type, "float")) || 
+										($3->datatype == TYPE_FLOAT && !strcmp(temp->val_type, "int")) ) {
+									
+									printf("ERROR: Value of wrong type assigned to %s variable %s. Line: %d.\n",
+																		temp->val_type, temp->name, yylineno);
+									$$ = NULL;
+								}
+								else {
+									$$ = $3;
+								}
+								// ===========================================================================
 
 								found = true;
 								break;
@@ -620,7 +642,32 @@ expr		:	ID OP_ASSIGN expr
 			|	expr1
 			;
 
-expr1		:	expr1 OP_PLUS expr1 { $$ = newast('+', $1, $3); }
+expr1		:	expr1 OP_PLUS expr1 
+				{ 
+					if($1->datatype == $3->datatype)
+						$$ = newast('+', $1, $3);
+					else { // error: mixed types in arithmetic op
+						$$ = NULL;
+						if($1->nodetype == 'I') {
+							struct idval *temp = (struct idval *)$1;
+							printf("ERROR: Adding %s \"%s\" (declared on line %d) to ", 
+									(temp->datatype == TYPE_INT ? "int" : "float"), temp->name, temp->decl_lineno);
+						}
+						else {
+							printf("ERROR: Adding %s value to ", ($1->datatype == TYPE_INT ? "int" : "float"));
+						}
+
+						if($3->nodetype == 'I') {
+							struct idval *temp = (struct idval *)$3;
+							printf("%s \"%s\" (declared on line %d). Line: %d\n", 
+								(temp->datatype == TYPE_INT ? "int" : "float"), temp->name, temp->decl_lineno, yylineno);
+						}
+						else {
+							printf("%s value. Line: %d\n", ($3->datatype == TYPE_INT ? "int" : "float"), yylineno);
+						}
+
+					}
+				}
 			|	expr1 OP_MINUS expr1 { $$ = newast('-', $1, $3); }
 			|	expr1 OP_MULT expr1 { $$ = newast('*', $1, $3); }
 			|	expr1 OP_DIV expr1 { $$ = newast('/', $1, $3); }
