@@ -45,43 +45,56 @@ extern int yydebug;
 # define YYTOKENTYPE
   enum yytokentype
   {
-    KW_INT = 258,
-    KW_FLOAT = 259,
-    KW_IF = 260,
-    KW_ELSE = 261,
-    KW_WHILE = 262,
-    KW_RETURN = 263,
-    KW_READ = 264,
-    KW_WRITE = 265,
-    ID = 266,
-    OP_PLUS = 267,
-    OP_MINUS = 268,
-    OP_MULT = 269,
-    OP_DIV = 270,
-    OP_ASSIGN = 271,
-    OP_EQ = 272,
-    OP_LT = 273,
-    OP_LE = 274,
-    OP_GT = 275,
-    OP_GE = 276,
-    LPAR = 277,
-    RPAR = 278,
-    LBRACE = 279,
-    RBRACE = 280,
-    SEMICOLON = 281,
-    COMMA = 282,
-    INT_LIT = 283,
-    FLOAT_LIT = 284,
-    STRING_LIT = 285,
-    NL_TOKEN = 286,
-    WS_TOKEN = 287,
+    ID = 258,
+    KW_INT = 259,
+    KW_FLOAT = 260,
+    INT_LIT = 261,
+    FLOAT_LIT = 262,
+    STRING_LIT = 263,
+    KW_IF = 264,
+    KW_ELSE = 265,
+    KW_WHILE = 266,
+    KW_RETURN = 267,
+    KW_READ = 268,
+    KW_WRITE = 269,
+    LPAR = 270,
+    RPAR = 271,
+    LBRACE = 272,
+    RBRACE = 273,
+    SEMICOLON = 274,
+    COMMA = 275,
+    NL_TOKEN = 276,
+    WS_TOKEN = 277,
+    OP_ASSIGN = 278,
+    OP_EQ = 279,
+    OP_LT = 280,
+    OP_LE = 281,
+    OP_GT = 282,
+    OP_GE = 283,
+    OP_PLUS = 284,
+    OP_MINUS = 285,
+    OP_MULT = 286,
+    OP_DIV = 287,
     UMINUS = 288
   };
 #endif
 
 /* Value type.  */
 #if ! defined YYSTYPE && ! defined YYSTYPE_IS_DECLARED
-typedef int YYSTYPE;
+
+union YYSTYPE
+{
+#line 107 "parser.y" /* yacc.c:1909  */
+
+	int i;
+	double d;
+	char *s;
+	struct ast *a;
+
+#line 95 "parser.tab.h" /* yacc.c:1909  */
+};
+
+typedef union YYSTYPE YYSTYPE;
 # define YYSTYPE_IS_TRIVIAL 1
 # define YYSTYPE_IS_DECLARED 1
 #endif
