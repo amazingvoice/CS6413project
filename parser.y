@@ -135,6 +135,8 @@ program	:
 
 function_decl:	kind ID LPAR kind RPAR SEMICOLON 
 				{
+					bool redeclared = false;
+
 					t_val = type[type_indicator++];
 					type_indicator %= 2;
 					t_ret = type[type_indicator];
@@ -145,20 +147,22 @@ function_decl:	kind ID LPAR kind RPAR SEMICOLON
 					// check for function redeclaration
 					while(temp != NULL) {	// search in the global table
 
-						if(strcmp(temp->name, $2) == 0 && temp->declared) {
+						if(strcmp(temp->name, $2) == 0) {
 							
-							found = true; // function redeclared
-							printf("function %s %s(%s) declared in line %d\n", 
-									data_type[t_ret], $2, data_type[t_val], yylineno);
+							found = true; // found the same name in global table
 
-							if(temp->ret_type != t_ret || temp->val_type != t_val) {
-
-								printf("ERROR: redeclaring %s with different \
-											signature in line %d.\n", $2, yylineno);
-
-								break;
+							if(temp->declared) {
+								if(temp->ret_type != t_ret || temp->val_type != t_val) {
+									redeclared = true;
+									printf("ERROR: redeclaring %s with different signature in line %d.\n", 
+																							$2, yylineno);
+								}
 							}
-
+							else {
+								redeclared = true;
+								printf("ERROR: redeclaring variable %s as a function in line %d.\n", 
+																					$2, yylineno);
+							}
 							break;
 						}
 
@@ -176,7 +180,8 @@ function_decl:	kind ID LPAR kind RPAR SEMICOLON
 						temp->implemented = false;
 						temp->called = false;
 						temp->decl_lineno = yylineno;
-		
+						
+								
 						/* add to the head of the gtable list */
 						/* CAUTION**: test if gtable is empty */
 						if(gtable != NULL) {
@@ -187,6 +192,11 @@ function_decl:	kind ID LPAR kind RPAR SEMICOLON
 							temp->next = NULL;
 							gtable = temp;
 						}
+					}
+					
+					if(!redeclared) {
+						printf("function %s %s(%s) declared in line %d\n", 
+									data_type[t_ret], $2, data_type[t_val], yylineno);
 					}
 				}
 			|	error SEMICOLON {yyerrok; }
@@ -214,8 +224,8 @@ function_def	:	kind ID LPAR kind ID RPAR
 									// mismatched with decl
 									
 									mismatched = true;
-									printf("ERROR: definition(line: %d) with mismatched \ 
-											signature(line %d) \n", yylineno, temp->decl_lineno);
+									printf("ERROR: definition(line: %d) with mismatched signature(line %d) \n", 
+																				yylineno, temp->decl_lineno);
 									break;
 								}
 								
@@ -322,8 +332,8 @@ decl	:	kind var_list SEMICOLON
 																		temp->name, yylineno);
 								}
 								else {
-									printf("ERROR: Redeclaring local variable %s with different \
-													type in line %d.\n", temp->name, yylineno);
+									printf("ERROR: Redeclaring local variable %s with different type in line %d.\n", 
+																							temp->name, yylineno);
 								}
 
 								found = true;
@@ -347,8 +357,8 @@ decl	:	kind var_list SEMICOLON
 																		temp->name, yylineno);
 								}
 								else {
-									printf("ERROR: Redeclaring global variable %s with different \
-													type in line %d.\n", temp->name, yylineno);
+									printf("ERROR: Redeclaring global variable %s with different type in line %d.\n", 
+																							temp->name, yylineno);
 								}
 
 								found = true;
@@ -358,8 +368,8 @@ decl	:	kind var_list SEMICOLON
 							if(strcmp(temp->name, head->name) == 0 && 
 									(temp->declared || temp->implemented)) {
 								
-								printf("ERROR: Redeclaring a function as a global variable %s \
-														in line %d.\n", temp->name, yylineno);
+								printf("ERROR: Redeclaring a function as a global variable %s in line %d.\n", 
+																						temp->name, yylineno);
 								
 								found = true;
 								break;
@@ -411,6 +421,15 @@ decl	:	kind var_list SEMICOLON
 				temp = head = tail = NULL;
 
 			} /* end action for decl */
+		|	kind error SEMICOLON 
+			{
+				while(head != NULL) {
+					temp = head;
+					head = head->next;
+					free(temp);
+				}
+				yyerrok;
+			}
 		;
 
 kind	:	KW_INT 
@@ -487,7 +506,9 @@ matched_stmt	:	expr SEMICOLON
 						} /* var_list loop */
 						head = tail = NULL;
 					}
+				|	KW_READ error SEMICOLON
 				|	KW_WRITE write_expr_list SEMICOLON 
+				|	KW_WRITE error SEMICOLON
 				|	KW_RETURN expr SEMICOLON
 				|	KW_IF LPAR bool_expr RPAR matched_stmt KW_ELSE matched_stmt
 				;
@@ -577,7 +598,7 @@ expr		:	ID OP_ASSIGN expr
 								if($3->datatype != temp->val_type) {
 								
 									printf("ERROR: Value of wrong type assigned to %s variable %s. Line: %d.\n",
-																		temp->val_type, temp->name, yylineno);
+																		data_type[temp->val_type], temp->name, yylineno);
 									$$ = NULL;
 								}
 								else {
@@ -781,7 +802,7 @@ factor		:	INT_LIT { $$ = newnum($1, TYPE_INT); }
 							if(strcmp(temp->name, $1) == 0 && (temp->declared || temp->implemented)) {
 								funcAsVar = true;
 								// AST
-								$$ = NULL;
+								$$ = newid(0.0, TYPE_INVALID, $1, 0, yylineno);
 							}
 							temp = temp->next;
 						}
@@ -792,7 +813,7 @@ factor		:	INT_LIT { $$ = newnum($1, TYPE_INT); }
 						else {
 							printf("ERROR line %d: variable %s not declared.\n", yylineno, $1);
 							// AST
-							$$ = NULL;
+							$$ = newid(0.0, TYPE_INVALID, $1, 0, yylineno);
 						}
 					}
 				} /* action for ID */
