@@ -84,7 +84,7 @@ struct ast * newast(int nodetype, struct ast *l, struct ast *r) {
 
 struct ast * newnum(double d, int datatype) {
 	struct numval *a = (struct numval *)malloc(sizeof(struct numval));
-	a->nodetype = ' ';
+	a->nodetype = 'N';
 	a->datatype = datatype;
 	a->val = d;
 	return (struct ast *)a;
@@ -214,7 +214,7 @@ function_def	:	kind ID LPAR kind ID RPAR
 						temp = gtable;
 						found = false;
 
-						while(temp != NULL) {
+						while(temp != NULL) { // check if mismatched with declaration
 							if((strcmp(temp->name, second_to_last_id) == 0) && (temp->declared)) {
 								if(strcmp(temp->ret_type, t_ret) != 0 || strcmp(temp->val_type, t_val) != 0) {
 									printf("ERROR: definition(line: %d) with mismatched \ 
@@ -229,9 +229,12 @@ function_def	:	kind ID LPAR kind ID RPAR
 							temp = temp->next;
 						}
 
-						if(!found && !bad_sig) {
+						if(!found) { // no declaration
+
 							temp = (sym *)malloc(sizeof(sym));
 							strcpy(temp->name, second_to_last_id); /* function name */
+							strcpy(temp->ret_type, t_ret);
+							strcpy(temp->val_type, t_val);
 							temp->declared = false;
 							temp->implemented = true;
 							temp->called = false;
@@ -248,11 +251,14 @@ function_def	:	kind ID LPAR kind ID RPAR
 							}
 						}
 						
-						if(!bad_sig) {
+						if(!bad_sig) { // function decl exists and matches the definition
+							
 							printf("function %s defined in line %d\n", second_to_last_id, yylineno);
+							temp->implemented = true;
+							temp->def_lineno = yylineno;
 							global = false;
 
-							/* function parameter */
+							/* add function parameter to local table */
 						
 							temp = (sym *)malloc(sizeof(sym));
 							strcpy(temp->name, yylval.s);
@@ -560,7 +566,7 @@ bool_op		:	OP_EQ
 			|	OP_GE
 			;
 
-expr		:	ID
+expr		:	ID OP_ASSIGN expr
 				{
 					funcAsVar = false;
 					found = false;
@@ -568,9 +574,13 @@ expr		:	ID
 					if(ltable != NULL) {
 						temp = ltable;
 						while(temp != NULL) { /* local symbol table */
-							if(strcmp(temp->name, yylval.s) == 0) {
+							if(strcmp(temp->name, $1) == 0) {
 								printf("Local %s variable %s declared in line %d used in line %d.\n", 
 									temp->val_type, temp->name, temp->lineno, yylineno);
+
+								// AST
+								$$ = $3;
+
 								found = true;
 								break;
 							}
@@ -580,14 +590,19 @@ expr		:	ID
 					if(found == false && gtable != NULL) {
 						temp = gtable;
 						while(temp != NULL) { /* global symbol table */
-							if(strcmp(temp->name, yylval.s) == 0 && !(temp->declared) && !(temp->implemented)) {
+							if(strcmp(temp->name, $1) == 0 && !(temp->declared) && !(temp->implemented)) {
 								printf("Global %s variable %s declared in line %d used in line %d.\n", 
 									temp->val_type, temp->name, temp->lineno, yylineno);
+
+								// AST
+								$$ = $3;
+
 								found = true;
 								break;
 							}
-							if(strcmp(temp->name, yylval.s) == 0 && (temp->declared || temp->implemented)) {
+							if(strcmp(temp->name, $1) == 0 && (temp->declared || temp->implemented)) {
 								funcAsVar = true;
+								$$ = NULL;
 							}
 							temp = temp->next;
 						}
@@ -595,11 +610,13 @@ expr		:	ID
 					if(!found) {
 						if(funcAsVar)
 							printf("ERROR line %d: function %s used as a variable.\n", yylineno, yylval);
-						else
+						else {
 							printf("ERROR line %d: variable %s not declared.\n", yylineno, yylval);
+							// AST
+							$$ = NULL;
+						}
 					}
 				} 
-				OP_ASSIGN expr { $$ = $4; }
 			|	expr1
 			;
 
@@ -643,11 +660,18 @@ factor		:	INT_LIT { $$ = newnum($1, TYPE_INT); }
 							if(strcmp(temp->name, yylval.s) == 0 && !(temp->declared) && !(temp->implemented)) {
 								printf("Global %s variable %s declared in line %d used in line %d.\n", 
 												temp->val_type, temp->name, temp->lineno, yylineno);
+								
+								// AST TODO: temporary ID value
+								$$ = newid(0.0, (strcmp(temp->val_type, "int") ? TYPE_FLOAT : TYPE_INT), 
+																temp->name, temp->lineno, yylineno);
+
 								found = true;
 								break;
 							}
 							if(strcmp(temp->name, yylval.s) == 0 && (temp->declared || temp->implemented)) {
 								funcAsVar = true;
+								// AST
+								$$ = NULL;
 							}
 							temp = temp->next;
 						}
@@ -655,8 +679,11 @@ factor		:	INT_LIT { $$ = newnum($1, TYPE_INT); }
 					if(!found) {
 						if(funcAsVar)
 							printf("ERROR line %d: function %s used as a variable.\n", yylineno, yylval);
-						else
+						else {
 							printf("ERROR line %d: variable %s not declared.\n", yylineno, yylval);
+							// AST
+							$$ = NULL;
+						}
 					}
 				} /* action for ID */
 			;
@@ -672,6 +699,10 @@ function_call	:	ID LPAR expr RPAR
 								if(strcmp(temp->name, $1) == 0) {
 									printf("ERROR line %d: variable %s used as function.\n", 
 																		yylineno, temp->name);
+
+									// AST
+									$$ = NULL;
+
 									found = true;
 									break;
 								}
@@ -686,6 +717,15 @@ function_call	:	ID LPAR expr RPAR
 										temp->called = true;
 										printf("Function %s defined in line %d used in line %d.\n", 
 															temp->name, temp->def_lineno, yylineno);
+										// AST ==================================================================
+										$$ = newnum(0.0, (strcmp(temp->ret_type, "int") ? TYPE_FLOAT : TYPE_INT));
+
+										if( ($3->datatype == TYPE_INT && !strcmp(temp->val_type, "float")) || 
+												($3->datatype == TYPE_FLOAT && !strcmp(temp->val_type, "int")) ) {
+											printf("ERROR: Function %s called with wrong parameter type. Line: %d.\n",
+																						temp->name, yylineno);
+										}
+										// ======================================================================
 										found = true;
 										break;
 									}
@@ -693,11 +733,22 @@ function_call	:	ID LPAR expr RPAR
 										temp->called = true;
 										printf("Function %s declared in line %d used in line %d.\n", 
 															temp->name, temp->decl_lineno, yylineno);
+										// AST ==================================================================
+										$$ = newnum(0.0, (strcmp(temp->ret_type, "int") ? TYPE_FLOAT : TYPE_INT));
+										
+										if( ($3->datatype == TYPE_INT && !strcmp(temp->val_type, "float")) || 
+												($3->datatype == TYPE_FLOAT && !strcmp(temp->val_type, "int")) ) {
+											printf("ERROR: Function %s called with wrong parameter type. Line: %d.\n",
+																						temp->name, yylineno);
+										}
+										// ======================================================================
 										found = true;
 										break;
 									}
 									else {
 										varAsFunc = true;
+										//AST
+										$$ = NULL;
 									}
 								}
 								temp = temp->next;
@@ -705,11 +756,14 @@ function_call	:	ID LPAR expr RPAR
 							if(!found) {
 								if(varAsFunc)
 									printf("ERROR line %d: variable %s used as a function.\n", yylineno, yylval);
-								else
+								else {
 									printf("ERROR line %d: function %s is not declared.\n", yylineno, yylval);
+									// AST
+									$$ = NULL;
+								}
 							}
 						}
-					} /* action for function_call*/
+					} /* action for function_call */
 				;
 
 %%
