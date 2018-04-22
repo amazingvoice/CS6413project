@@ -5,9 +5,11 @@
 #include <string.h>
 #include <stdbool.h>
 
-#define TYPE_INVALID -1
+#define TYPE_INVALID 0
 #define TYPE_INT 1
 #define TYPE_FLOAT 2
+
+char *data_type[3] = {"INVALID", "int", "float"};
 
 /* interface to the lexer */
 extern int yylineno;
@@ -76,7 +78,10 @@ struct idval {
 struct ast * newast(int nodetype, struct ast *l, struct ast *r) {
 	struct ast *a = (struct ast *)malloc(sizeof(struct ast));
 	a->nodetype = nodetype;
-	a->datatype = ( (l->datatype == r->datatype) ? l->datatype : TYPE_INVALID );
+	if(nodetype == 'M')
+		a->datatype = l->datatype;
+	else
+		a->datatype = ( (l->datatype == r->datatype) ? l->datatype : TYPE_INVALID );
 	a->l = l;
 	a->r = r;
 	return a;
@@ -644,33 +649,106 @@ expr		:	ID OP_ASSIGN expr
 
 expr1		:	expr1 OP_PLUS expr1 
 				{ 
-					if($1->datatype == $3->datatype)
-						$$ = newast('+', $1, $3);
-					else { // error: mixed types in arithmetic op
-						$$ = NULL;
+					$$ = newast('+', $1, $3);
+
+					if($1->datatype != $3->datatype) { // error: mixed types in arithmetic op
+						
 						if($1->nodetype == 'I') {
 							struct idval *temp = (struct idval *)$1;
 							printf("ERROR: Adding %s \"%s\" (declared on line %d) to ", 
-									(temp->datatype == TYPE_INT ? "int" : "float"), temp->name, temp->decl_lineno);
+									data_type[temp->datatype], temp->name, temp->decl_lineno);
 						}
 						else {
-							printf("ERROR: Adding %s value to ", ($1->datatype == TYPE_INT ? "int" : "float"));
+							printf("ERROR: Adding %s value to ", data_type[$1->datatype]);
 						}
 
 						if($3->nodetype == 'I') {
 							struct idval *temp = (struct idval *)$3;
 							printf("%s \"%s\" (declared on line %d). Line: %d\n", 
-								(temp->datatype == TYPE_INT ? "int" : "float"), temp->name, temp->decl_lineno, yylineno);
+									data_type[temp->datatype], temp->name, temp->decl_lineno, yylineno);
 						}
 						else {
-							printf("%s value. Line: %d\n", ($3->datatype == TYPE_INT ? "int" : "float"), yylineno);
+							printf("%s value. Line: %d\n", data_type[$3->datatype], yylineno);
+						}
+					}
+				}
+			|	expr1 OP_MINUS expr1 
+				{
+					$$ = newast('-', $1, $3);
+
+					if($1->datatype != $3->datatype) { // error: mixed types in arithmetic op
+
+						if($1->nodetype == 'I') {
+							struct idval *temp = (struct idval *)$1;
+							printf("ERROR: From %s \"%s\" (declared on line %d) ", 
+									data_type[temp->datatype], temp->name, temp->decl_lineno);
+						}
+						else {
+							printf("ERROR: From %s value ", data_type[$1->datatype]);
+						}
+
+						if($3->nodetype == 'I') {
+							struct idval *temp = (struct idval *)$3;
+							printf("subtract %s \"%s\" (declared on line %d). Line: %d\n", 
+									data_type[temp->datatype], temp->name, temp->decl_lineno, yylineno);
+						}
+						else {
+							printf("subtract %s value. Line: %d\n", data_type[$3->datatype], yylineno);
 						}
 
 					}
 				}
-			|	expr1 OP_MINUS expr1 { $$ = newast('-', $1, $3); }
-			|	expr1 OP_MULT expr1 { $$ = newast('*', $1, $3); }
-			|	expr1 OP_DIV expr1 { $$ = newast('/', $1, $3); }
+			|	expr1 OP_MULT expr1 
+				{
+					$$ = newast('*', $1, $3);
+
+ 					if($1->datatype != $3->datatype) { // error: mixed types in arithmetic op
+
+						if($1->nodetype == 'I') {
+							struct idval *temp = (struct idval *)$1;
+							printf("ERROR: Multiplying %s \"%s\" (declared on line %d) by ", 
+									data_type[temp->datatype], temp->name, temp->decl_lineno);
+						}
+						else {
+							printf("ERROR: Multiplying %s value by ", data_type[$1->datatype]);
+						}
+
+						if($3->nodetype == 'I') {
+							struct idval *temp = (struct idval *)$3;
+							printf("%s \"%s\" (declared on line %d). Line: %d\n", 
+									data_type[temp->datatype], temp->name, temp->decl_lineno, yylineno);
+						}
+						else {
+							printf("%s value. Line: %d\n", data_type[$3->datatype], yylineno);
+						}
+
+					}
+				}
+			|	expr1 OP_DIV expr1 
+				{
+					$$ = newast('/', $1, $3);
+
+					if($1->datatype != $3->datatype) { // error: mixed types in arithmetic op
+
+						if($1->nodetype == 'I') {
+							struct idval *temp = (struct idval *)$1;
+							printf("ERROR: dividing %s \"%s\" (declared on line %d) by ", 
+									data_type[temp->datatype], temp->name, temp->decl_lineno);
+						}
+						else {
+							printf("ERROR: dividing %s value by ", data_type[$1->datatype]);
+						}
+
+						if($3->nodetype == 'I') {
+							struct idval *temp = (struct idval *)$3;
+							printf("%s \"%s\" (declared on line %d). Line: %d\n", 
+								data_type[temp->datatype], temp->name, temp->decl_lineno, yylineno);
+						}
+						else {
+							printf("%s value. Line: %d\n", data_type[$3->datatype], yylineno);
+						}
+					}
+				}
 			|	OP_MINUS factor %prec UMINUS { $$ = newast('M', $2, NULL); }
 			|	factor
 			;
