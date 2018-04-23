@@ -314,11 +314,11 @@ stmts	:
 decl	:	kind var_list SEMICOLON 
 			{
 				// search for variable redeclaration
-				while(head != NULL) { // head of var_list is not null
+				while(head != NULL) { // loop through var_list
 
 					found = false;
 
-					/* search for local redeclaration */
+					/* search for LOCAL redeclaration */
 					if(!global && ltable != NULL) { 
 
 						temp = ltable;
@@ -339,42 +339,38 @@ decl	:	kind var_list SEMICOLON
 								found = true;
 								break;
 							}
-
 							temp = temp->next;
 						}
 					}
-					/* search for global redeclaration */
+
+					/* search for GLOBAL redeclaration */
 					if(global && gtable != NULL) { 
 
 						temp = gtable;
 
-						while(temp != NULL) { /* loop for global symbol table */
+						while(temp != NULL) { /* loop through global symbol table */
 
-							if(strcmp(temp->name, head->name) == 0 && 
-									!(temp->declared) && !(temp->implemented)) {
-								if(temp->val_type == head->val_type) {
-									printf("ERROR: Redeclaring global variable %s in line %d.\n", 
-																		temp->name, yylineno);
-								}
-								else {
-									printf("ERROR: Redeclaring global variable %s with different type in line %d.\n", 
-																							temp->name, yylineno);
-								}
+							if(strcmp(temp->name, head->name) == 0) { // redeclaration found
 
-								found = true;
-								break;
-							}
-							/* funcAsVar*/
-							if(strcmp(temp->name, head->name) == 0 && 
-									(temp->declared || temp->implemented)) {
-								
-								printf("ERROR: Redeclaring a function as a global variable %s in line %d.\n", 
+								if(!(temp->declared) && !(temp->implemented)) {
+									
+									if(temp->val_type == head->val_type) {
+										printf("ERROR: Redeclaring global variable %s in line %d.\n", 
+																			temp->name, yylineno);
+									}
+									else {
+										printf("ERROR: Redeclaring global variable %s with different type in line %d.\n", 
+																								temp->name, yylineno);
+									}
+								}
+								else { /* funcAsVar */
+									printf("ERROR: Redeclaring a function as a global variable %s in line %d.\n", 
 																						temp->name, yylineno);
-								
+								}
+
 								found = true;
 								break;
 							}
-
 							temp = temp->next;
 						}
 					}
@@ -383,7 +379,7 @@ decl	:	kind var_list SEMICOLON
 
 						global ? printf("Global ") : printf("Local ");
 						printf("%s variable %s declared in line %d.\n", 
-										data_type[head->val_type], head->name, head->lineno);
+								data_type[head->val_type], head->name, head->lineno);
 						
 						// add to corresponding table
 						if(global) { /* add to gtable */
@@ -418,6 +414,7 @@ decl	:	kind var_list SEMICOLON
 					}
 
 				} /* while(head != NULL) */
+
 				temp = head = tail = NULL;
 
 			} /* end action for decl */

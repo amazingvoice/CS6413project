@@ -564,12 +564,12 @@ static const yytype_uint8 yytranslate[] =
 static const yytype_uint16 yyrline[] =
 {
        0,   130,   130,   131,   132,   133,   136,   202,   206,   205,
-     302,   305,   306,   309,   310,   311,   314,   424,   435,   441,
-     449,   450,   453,   454,   457,   458,   459,   460,   509,   510,
-     511,   512,   513,   516,   519,   520,   523,   524,   528,   527,
-     551,   552,   574,   577,   578,   579,   580,   581,   584,   655,
-     658,   683,   709,   735,   760,   761,   764,   765,   766,   767,
-     768,   822
+     302,   305,   306,   309,   310,   311,   314,   421,   432,   438,
+     446,   447,   450,   451,   454,   455,   456,   457,   506,   507,
+     508,   509,   510,   513,   516,   517,   520,   521,   525,   524,
+     548,   549,   571,   574,   575,   576,   577,   578,   581,   652,
+     655,   680,   706,   732,   757,   758,   761,   762,   763,   764,
+     765,   819
 };
 #endif
 
@@ -1697,11 +1697,11 @@ yyreduce:
 #line 315 "parser.y" /* yacc.c:1646  */
     {
 				// search for variable redeclaration
-				while(head != NULL) { // head of var_list is not null
+				while(head != NULL) { // loop through var_list
 
 					found = false;
 
-					/* search for local redeclaration */
+					/* search for LOCAL redeclaration */
 					if(!global && ltable != NULL) { 
 
 						temp = ltable;
@@ -1722,42 +1722,38 @@ yyreduce:
 								found = true;
 								break;
 							}
-
 							temp = temp->next;
 						}
 					}
-					/* search for global redeclaration */
+
+					/* search for GLOBAL redeclaration */
 					if(global && gtable != NULL) { 
 
 						temp = gtable;
 
-						while(temp != NULL) { /* loop for global symbol table */
+						while(temp != NULL) { /* loop through global symbol table */
 
-							if(strcmp(temp->name, head->name) == 0 && 
-									!(temp->declared) && !(temp->implemented)) {
-								if(temp->val_type == head->val_type) {
-									printf("ERROR: Redeclaring global variable %s in line %d.\n", 
-																		temp->name, yylineno);
-								}
-								else {
-									printf("ERROR: Redeclaring global variable %s with different type in line %d.\n", 
-																							temp->name, yylineno);
-								}
+							if(strcmp(temp->name, head->name) == 0) { // redeclaration found
 
-								found = true;
-								break;
-							}
-							/* funcAsVar*/
-							if(strcmp(temp->name, head->name) == 0 && 
-									(temp->declared || temp->implemented)) {
-								
-								printf("ERROR: Redeclaring a function as a global variable %s in line %d.\n", 
+								if(!(temp->declared) && !(temp->implemented)) {
+									
+									if(temp->val_type == head->val_type) {
+										printf("ERROR: Redeclaring global variable %s in line %d.\n", 
+																			temp->name, yylineno);
+									}
+									else {
+										printf("ERROR: Redeclaring global variable %s with different type in line %d.\n", 
+																								temp->name, yylineno);
+									}
+								}
+								else { /* funcAsVar */
+									printf("ERROR: Redeclaring a function as a global variable %s in line %d.\n", 
 																						temp->name, yylineno);
-								
+								}
+
 								found = true;
 								break;
 							}
-
 							temp = temp->next;
 						}
 					}
@@ -1766,7 +1762,7 @@ yyreduce:
 
 						global ? printf("Global ") : printf("Local ");
 						printf("%s variable %s declared in line %d.\n", 
-										data_type[head->val_type], head->name, head->lineno);
+								data_type[head->val_type], head->name, head->lineno);
 						
 						// add to corresponding table
 						if(global) { /* add to gtable */
@@ -1801,14 +1797,15 @@ yyreduce:
 					}
 
 				} /* while(head != NULL) */
+
 				temp = head = tail = NULL;
 
 			}
-#line 1808 "parser.tab.c" /* yacc.c:1646  */
+#line 1805 "parser.tab.c" /* yacc.c:1646  */
     break;
 
   case 17:
-#line 425 "parser.y" /* yacc.c:1646  */
+#line 422 "parser.y" /* yacc.c:1646  */
     {
 				while(head != NULL) {
 					temp = head;
@@ -1817,31 +1814,31 @@ yyreduce:
 				}
 				yyerrok;
 			}
-#line 1821 "parser.tab.c" /* yacc.c:1646  */
+#line 1818 "parser.tab.c" /* yacc.c:1646  */
     break;
 
   case 18:
-#line 436 "parser.y" /* yacc.c:1646  */
+#line 433 "parser.y" /* yacc.c:1646  */
     {	 
 				type_indicator++;
 				type_indicator %= 2;	
 				type[type_indicator] = TYPE_INT; 
 			}
-#line 1831 "parser.tab.c" /* yacc.c:1646  */
+#line 1828 "parser.tab.c" /* yacc.c:1646  */
     break;
 
   case 19:
-#line 442 "parser.y" /* yacc.c:1646  */
+#line 439 "parser.y" /* yacc.c:1646  */
     {
 				type_indicator++;
 				type_indicator %= 2;	
 				type[type_indicator] = TYPE_FLOAT;
 			}
-#line 1841 "parser.tab.c" /* yacc.c:1646  */
+#line 1838 "parser.tab.c" /* yacc.c:1646  */
     break;
 
   case 27:
-#line 461 "parser.y" /* yacc.c:1646  */
+#line 458 "parser.y" /* yacc.c:1646  */
     {
 						while(head != NULL) { /* loop for var_list */
 							
@@ -1890,11 +1887,11 @@ yyreduce:
 						} /* var_list loop */
 						head = tail = NULL;
 					}
-#line 1894 "parser.tab.c" /* yacc.c:1646  */
+#line 1891 "parser.tab.c" /* yacc.c:1646  */
     break;
 
   case 38:
-#line 528 "parser.y" /* yacc.c:1646  */
+#line 525 "parser.y" /* yacc.c:1646  */
     {
 					if(head == NULL) {
 						head = (sym *)malloc(sizeof(sym));
@@ -1915,11 +1912,11 @@ yyreduce:
 						printf("ERROR line %d: head is not NULL.\n", yylineno);
 					}
 				}
-#line 1919 "parser.tab.c" /* yacc.c:1646  */
+#line 1916 "parser.tab.c" /* yacc.c:1646  */
     break;
 
   case 41:
-#line 553 "parser.y" /* yacc.c:1646  */
+#line 550 "parser.y" /* yacc.c:1646  */
     {	
 						if(tail != NULL) {
 							tail->next = (sym *)malloc(sizeof(sym));
@@ -1939,11 +1936,11 @@ yyreduce:
 							printf("ERROR line %d: tail is NULL.\n", yylineno);
 						}
 					}
-#line 1943 "parser.tab.c" /* yacc.c:1646  */
+#line 1940 "parser.tab.c" /* yacc.c:1646  */
     break;
 
   case 48:
-#line 585 "parser.y" /* yacc.c:1646  */
+#line 582 "parser.y" /* yacc.c:1646  */
     {
 					funcAsVar = false;
 					found = false;
@@ -2014,11 +2011,11 @@ yyreduce:
 						}
 					}
 				}
-#line 2018 "parser.tab.c" /* yacc.c:1646  */
+#line 2015 "parser.tab.c" /* yacc.c:1646  */
     break;
 
   case 50:
-#line 659 "parser.y" /* yacc.c:1646  */
+#line 656 "parser.y" /* yacc.c:1646  */
     { 
 					(yyval.a) = newast('+', (yyvsp[-2].a), (yyvsp[0].a));
 
@@ -2043,11 +2040,11 @@ yyreduce:
 						}
 					}
 				}
-#line 2047 "parser.tab.c" /* yacc.c:1646  */
+#line 2044 "parser.tab.c" /* yacc.c:1646  */
     break;
 
   case 51:
-#line 684 "parser.y" /* yacc.c:1646  */
+#line 681 "parser.y" /* yacc.c:1646  */
     {
 					(yyval.a) = newast('-', (yyvsp[-2].a), (yyvsp[0].a));
 
@@ -2073,11 +2070,11 @@ yyreduce:
 
 					}
 				}
-#line 2077 "parser.tab.c" /* yacc.c:1646  */
+#line 2074 "parser.tab.c" /* yacc.c:1646  */
     break;
 
   case 52:
-#line 710 "parser.y" /* yacc.c:1646  */
+#line 707 "parser.y" /* yacc.c:1646  */
     {
 					(yyval.a) = newast('*', (yyvsp[-2].a), (yyvsp[0].a));
 
@@ -2103,11 +2100,11 @@ yyreduce:
 
 					}
 				}
-#line 2107 "parser.tab.c" /* yacc.c:1646  */
+#line 2104 "parser.tab.c" /* yacc.c:1646  */
     break;
 
   case 53:
-#line 736 "parser.y" /* yacc.c:1646  */
+#line 733 "parser.y" /* yacc.c:1646  */
     {
 					(yyval.a) = newast('/', (yyvsp[-2].a), (yyvsp[0].a));
 
@@ -2132,35 +2129,35 @@ yyreduce:
 						}
 					}
 				}
-#line 2136 "parser.tab.c" /* yacc.c:1646  */
+#line 2133 "parser.tab.c" /* yacc.c:1646  */
     break;
 
   case 54:
-#line 760 "parser.y" /* yacc.c:1646  */
+#line 757 "parser.y" /* yacc.c:1646  */
     { (yyval.a) = newast('M', (yyvsp[0].a), NULL); }
-#line 2142 "parser.tab.c" /* yacc.c:1646  */
+#line 2139 "parser.tab.c" /* yacc.c:1646  */
     break;
 
   case 56:
-#line 764 "parser.y" /* yacc.c:1646  */
+#line 761 "parser.y" /* yacc.c:1646  */
     { (yyval.a) = newnum((yyvsp[0].i), TYPE_INT); }
-#line 2148 "parser.tab.c" /* yacc.c:1646  */
+#line 2145 "parser.tab.c" /* yacc.c:1646  */
     break;
 
   case 57:
-#line 765 "parser.y" /* yacc.c:1646  */
+#line 762 "parser.y" /* yacc.c:1646  */
     { (yyval.a) = newnum((yyvsp[0].d), TYPE_FLOAT); }
-#line 2154 "parser.tab.c" /* yacc.c:1646  */
+#line 2151 "parser.tab.c" /* yacc.c:1646  */
     break;
 
   case 59:
-#line 767 "parser.y" /* yacc.c:1646  */
+#line 764 "parser.y" /* yacc.c:1646  */
     { (yyval.a) = (yyvsp[-1].a); }
-#line 2160 "parser.tab.c" /* yacc.c:1646  */
+#line 2157 "parser.tab.c" /* yacc.c:1646  */
     break;
 
   case 60:
-#line 769 "parser.y" /* yacc.c:1646  */
+#line 766 "parser.y" /* yacc.c:1646  */
     {
 					found = false;
 					funcAsVar = false;
@@ -2212,11 +2209,11 @@ yyreduce:
 						}
 					}
 				}
-#line 2216 "parser.tab.c" /* yacc.c:1646  */
+#line 2213 "parser.tab.c" /* yacc.c:1646  */
     break;
 
   case 61:
-#line 823 "parser.y" /* yacc.c:1646  */
+#line 820 "parser.y" /* yacc.c:1646  */
     {
 						varAsFunc = false;
 						found = false;
@@ -2290,11 +2287,11 @@ yyreduce:
 							}
 						}
 					}
-#line 2294 "parser.tab.c" /* yacc.c:1646  */
+#line 2291 "parser.tab.c" /* yacc.c:1646  */
     break;
 
 
-#line 2298 "parser.tab.c" /* yacc.c:1646  */
+#line 2295 "parser.tab.c" /* yacc.c:1646  */
       default: break;
     }
   /* User semantic actions sometimes alter yychar, and that requires
@@ -2529,7 +2526,7 @@ yyreturn:
 #endif
   return yyresult;
 }
-#line 898 "parser.y" /* yacc.c:1906  */
+#line 895 "parser.y" /* yacc.c:1906  */
 
 
 main(int argc, char **argv)
