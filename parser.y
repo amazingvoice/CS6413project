@@ -688,19 +688,32 @@ expr		:	ID
 					found = false;
 
 					if(ltable != NULL) {
+
 						temp = ltable;
 						while(temp != NULL) { /* local symbol table */
-							if(strcmp(temp->name, $1) == 0) {
 
-								// AST =======================================================================
+							if(strcmp(temp->name, $1) == 0) { // variable found in local table
+
+								// AST AND TARGET CODE GENERATION ============================================
 
 								if($4->datatype != temp->val_type) {
 								
 									printf("ERROR: Value of wrong type assigned to %s variable %s. Line: %d.\n",
 																		data_type[temp->val_type], temp->name, yylineno);
-									$$ = NULL;
+									$$  = $4;
 								}
 								else {
+									if(temp->val_type == TYPE_INT) {
+										printf("COPY ");
+										$4->nodetype == 'N' ? printf("#%d ", (int)((struct numval *)$4)->val) : printf("%d ", $4->mem_loc);
+										printf("%d\n", temp->mem_loc);
+									}
+									else {
+										printf("COPYF ");
+										$4->nodetype == 'N' ? printf("#%d ", ((struct numval *)$4)->val) : printf("%d ", $4->mem_loc);
+										printf("%d\n", temp->mem_loc);
+									}
+	
 									$$ = $4;
 								}
 								// ===========================================================================
@@ -721,9 +734,23 @@ expr		:	ID
 								if($4->datatype != temp->val_type) {
 									printf("ERROR: Value of wrong type assigned to %s variable %s. Line: %d.\n",
 																		data_type[temp->val_type], temp->name, yylineno);
-									$$ = NULL;
+									$$ = $4;
 								}
-								else { $$ = $4; }
+								else {
+									if(temp->val_type == TYPE_INT) {
+										printf("COPY ");
+										$4->nodetype == 'N' ? printf("#%d ", (int)((struct numval *)$4)->val) : printf("%d ", $4->mem_loc);
+										printf("%d\n", temp->mem_loc);
+									}
+									else {
+										printf("COPYF ");
+										$4->nodetype == 'N' ? printf("#%d ", ((struct numval *)$4)->val) : printf("%d ", $4->mem_loc);
+										printf("%d\n", temp->mem_loc);
+									}
+	
+									$$ = $4;
+								}
+
 								// ===========================================================================
 
 								found = true;
