@@ -4,7 +4,7 @@ Terminals unused in grammar
    WS_TOKEN
 
 
-State 102 conflicts: 1 shift/reduce
+State 116 conflicts: 1 shift/reduce
 
 
 Grammar
@@ -23,113 +23,126 @@ Grammar
 
     8 function_def: kind ID LPAR kind ID RPAR $@1 body
 
-    9 body: LBRACE decls stmts RBRACE
+    9 $@2: %empty
 
-   10 decls: %empty
-   11      | decls decl
+   10 function_def: kind ID LPAR error RPAR $@2 body
 
-   12 stmts: %empty
-   13      | stmts stmt
-   14      | LBRACE stmts RBRACE
+   11 body: LBRACE decls stmts RBRACE
 
-   15 decl: kind var_list SEMICOLON
-   16     | kind error SEMICOLON
+   12 decls: %empty
+   13      | decls decl
 
-   17 kind: KW_INT
-   18     | KW_FLOAT
+   14 stmts: %empty
+   15      | stmts stmt
+   16      | LBRACE stmts RBRACE
 
-   19 stmt: matched_stmt
-   20     | open_stmt
+   17 decl: kind var_list SEMICOLON
+   18     | kind error SEMICOLON
 
-   21 open_stmt: KW_IF LPAR bool_expr RPAR stmt
-   22          | KW_IF LPAR bool_expr RPAR matched_stmt KW_ELSE open_stmt
+   19 kind: KW_INT
+   20     | KW_FLOAT
 
-   23 matched_stmt: expr SEMICOLON
-   24             | KW_WHILE LPAR bool_expr RPAR stmt
-   25             | KW_WHILE LPAR bool_expr RPAR body
-   26             | KW_READ var_list SEMICOLON
-   27             | KW_READ error SEMICOLON
-   28             | KW_WRITE write_expr_list SEMICOLON
-   29             | KW_WRITE error SEMICOLON
-   30             | KW_RETURN expr SEMICOLON
-   31             | KW_IF LPAR bool_expr RPAR matched_stmt KW_ELSE matched_stmt
+   21 stmt: matched_stmt
+   22     | open_stmt
 
-   32 write_expr_list: wlist_unit wlist_rep
+   23 open_stmt: KW_IF LPAR bool_expr RPAR stmt
+   24          | KW_IF LPAR bool_expr RPAR matched_stmt KW_ELSE open_stmt
 
-   33 wlist_unit: expr
-   34           | STRING_LIT
+   25 matched_stmt: expr SEMICOLON
+   26             | error SEMICOLON
+   27             | KW_WHILE LPAR bool_expr RPAR stmt
+   28             | KW_WHILE LPAR error
+   29             | KW_WHILE LPAR bool_expr RPAR body
 
-   35 wlist_rep: %empty
-   36          | wlist_rep COMMA wlist_unit
+   30 $@3: %empty
 
-   37 $@2: %empty
+   31 matched_stmt: KW_READ $@3 var_list SEMICOLON
+   32             | KW_READ error SEMICOLON
+   33             | KW_WRITE write_expr_list SEMICOLON
+   34             | KW_WRITE error SEMICOLON
+   35             | KW_RETURN expr SEMICOLON
+   36             | KW_IF LPAR bool_expr RPAR matched_stmt KW_ELSE matched_stmt
+   37             | KW_IF LPAR error RPAR matched_stmt KW_ELSE matched_stmt
 
-   38 var_list: ID $@2 var_list_rep
+   38 write_expr_list: wlist_unit wlist_rep
 
-   39 var_list_rep: %empty
-   40             | var_list_rep COMMA ID
+   39 wlist_unit: expr
+   40           | STRING_LIT
 
-   41 bool_expr: expr bool_op expr
+   41 wlist_rep: %empty
+   42          | wlist_rep COMMA wlist_unit
 
-   42 bool_op: OP_EQ
-   43        | OP_LT
-   44        | OP_LE
-   45        | OP_GT
-   46        | OP_GE
+   43 $@4: %empty
 
-   47 expr: ID OP_ASSIGN expr
-   48     | expr1
+   44 var_list: ID $@4 var_list_rep
 
-   49 expr1: expr1 OP_PLUS expr1
-   50      | expr1 OP_MINUS expr1
-   51      | expr1 OP_MULT expr1
-   52      | expr1 OP_DIV expr1
-   53      | OP_MINUS factor
-   54      | factor
+   45 var_list_rep: %empty
+   46             | var_list_rep COMMA ID
 
-   55 factor: INT_LIT
-   56       | FLOAT_LIT
-   57       | function_call
-   58       | LPAR expr RPAR
-   59       | ID
+   47 bool_expr: expr bool_op expr
+   48          | expr error expr
 
-   60 function_call: ID LPAR expr RPAR
+   49 bool_op: OP_EQ
+   50        | OP_LT
+   51        | OP_LE
+   52        | OP_GT
+   53        | OP_GE
+
+   54 $@5: %empty
+
+   55 expr: ID $@5 OP_ASSIGN expr
+   56     | expr1
+
+   57 expr1: expr1 OP_PLUS expr1
+   58      | expr1 OP_MINUS expr1
+   59      | expr1 OP_MULT expr1
+   60      | expr1 OP_DIV expr1
+   61      | OP_MINUS factor
+   62      | factor
+
+   63 factor: INT_LIT
+   64       | FLOAT_LIT
+   65       | function_call
+   66       | LPAR expr RPAR
+   67       | ID
+
+   68 function_call: ID LPAR expr RPAR
 
 
 Terminals, with rules where they appear
 
 $end (0) 0
-error (256) 6 16 27 29
-ID (258) 5 8 38 40 47 59 60
-KW_INT (259) 17
-KW_FLOAT (260) 18
-INT_LIT (261) 55
-FLOAT_LIT (262) 56
-STRING_LIT (263) 34
-KW_IF (264) 21 22 31
-KW_ELSE (265) 22 31
-KW_WHILE (266) 24 25
-KW_RETURN (267) 30
-KW_READ (268) 26 27
-KW_WRITE (269) 28 29
-LPAR (270) 5 8 21 22 24 25 31 58 60
-RPAR (271) 5 8 21 22 24 25 31 58 60
-LBRACE (272) 9 14
-RBRACE (273) 9 14
-SEMICOLON (274) 5 6 15 16 23 26 27 28 29 30
-COMMA (275) 36 40
+error (256) 6 10 18 26 28 32 34 37 48
+ID (258) 5 8 10 44 46 55 67 68
+KW_INT (259) 19
+KW_FLOAT (260) 20
+INT_LIT (261) 63
+FLOAT_LIT (262) 64
+STRING_LIT (263) 40
+KW_IF (264) 23 24 36 37
+KW_ELSE (265) 24 36 37
+KW_WHILE (266) 27 28 29
+KW_RETURN (267) 35
+KW_READ (268) 31 32
+KW_WRITE (269) 33 34
+LPAR (270) 5 8 10 23 24 27 28 29 36 37 66 68
+RPAR (271) 5 8 10 23 24 27 29 36 37 66 68
+LBRACE (272) 11 16
+RBRACE (273) 11 16
+SEMICOLON (274) 5 6 17 18 25 26 31 32 33 34 35
+COMMA (275) 42 46
 NL_TOKEN (276)
 WS_TOKEN (277)
-OP_ASSIGN (278) 47
-OP_EQ (279) 42
-OP_LT (280) 43
-OP_LE (281) 44
-OP_GT (282) 45
-OP_GE (283) 46
-OP_PLUS (284) 49
-OP_MINUS (285) 50 53
-OP_MULT (286) 51
-OP_DIV (287) 52
+OP_ASSIGN (278) 55
+OP_EQ (279) 49
+OP_LT (280) 50
+OP_LE (281) 51
+OP_GT (282) 52
+OP_GE (283) 53
+OP_PLUS (284) 57
+OP_MINUS (285) 58 61
+OP_MULT (286) 59
+OP_DIV (287) 60
 UMINUS (288)
 
 
@@ -142,49 +155,56 @@ program (35)
 function_decl (36)
     on left: 5 6, on right: 4
 function_def (37)
-    on left: 8, on right: 2
+    on left: 8 10, on right: 2
 $@1 (38)
     on left: 7, on right: 8
-body (39)
-    on left: 9, on right: 8 25
-decls (40)
-    on left: 10 11, on right: 9 11
-stmts (41)
-    on left: 12 13 14, on right: 9 13 14
-decl (42)
-    on left: 15 16, on right: 3 11
-kind (43)
-    on left: 17 18, on right: 5 8 15 16
-stmt (44)
-    on left: 19 20, on right: 13 21 24
-open_stmt (45)
-    on left: 21 22, on right: 20 22
-matched_stmt (46)
-    on left: 23 24 25 26 27 28 29 30 31, on right: 19 22 31
-write_expr_list (47)
-    on left: 32, on right: 28
-wlist_unit (48)
-    on left: 33 34, on right: 32 36
-wlist_rep (49)
-    on left: 35 36, on right: 32 36
-var_list (50)
-    on left: 38, on right: 15 26
-$@2 (51)
-    on left: 37, on right: 38
-var_list_rep (52)
-    on left: 39 40, on right: 38 40
-bool_expr (53)
-    on left: 41, on right: 21 22 24 25 31
-bool_op (54)
-    on left: 42 43 44 45 46, on right: 41
-expr (55)
-    on left: 47 48, on right: 23 30 33 41 47 58 60
-expr1 (56)
-    on left: 49 50 51 52 53 54, on right: 48 49 50 51 52
-factor (57)
-    on left: 55 56 57 58 59, on right: 53 54
-function_call (58)
-    on left: 60, on right: 57
+$@2 (39)
+    on left: 9, on right: 10
+body (40)
+    on left: 11, on right: 8 10 29
+decls (41)
+    on left: 12 13, on right: 11 13
+stmts (42)
+    on left: 14 15 16, on right: 11 15 16
+decl (43)
+    on left: 17 18, on right: 3 13
+kind (44)
+    on left: 19 20, on right: 5 8 10 17 18
+stmt (45)
+    on left: 21 22, on right: 15 23 27
+open_stmt (46)
+    on left: 23 24, on right: 22 24
+matched_stmt (47)
+    on left: 25 26 27 28 29 31 32 33 34 35 36 37, on right: 21 24 36
+    37
+$@3 (48)
+    on left: 30, on right: 31
+write_expr_list (49)
+    on left: 38, on right: 33
+wlist_unit (50)
+    on left: 39 40, on right: 38 42
+wlist_rep (51)
+    on left: 41 42, on right: 38 42
+var_list (52)
+    on left: 44, on right: 17 31
+$@4 (53)
+    on left: 43, on right: 44
+var_list_rep (54)
+    on left: 45 46, on right: 44 46
+bool_expr (55)
+    on left: 47 48, on right: 23 24 27 29 36
+bool_op (56)
+    on left: 49 50 51 52 53, on right: 47
+expr (57)
+    on left: 55 56, on right: 25 35 39 47 48 55 66 68
+$@5 (58)
+    on left: 54, on right: 55
+expr1 (59)
+    on left: 57 58 59 60 61 62, on right: 56 57 58 59 60
+factor (60)
+    on left: 63 64 65 66 67, on right: 61 62
+function_call (61)
+    on left: 68, on right: 65
 
 
 State 0
@@ -230,16 +250,16 @@ State 3
 
 State 4
 
-   17 kind: KW_INT .
+   19 kind: KW_INT .
 
-    $default  reduce using rule 17 (kind)
+    $default  reduce using rule 19 (kind)
 
 
 State 5
 
-   18 kind: KW_FLOAT .
+   20 kind: KW_FLOAT .
 
-    $default  reduce using rule 18 (kind)
+    $default  reduce using rule 20 (kind)
 
 
 State 6
@@ -267,8 +287,9 @@ State 9
 
     5 function_decl: kind . ID LPAR kind RPAR SEMICOLON
     8 function_def: kind . ID LPAR kind ID RPAR $@1 body
-   15 decl: kind . var_list SEMICOLON
-   16     | kind . error SEMICOLON
+   10             | kind . ID LPAR error RPAR $@2 body
+   17 decl: kind . var_list SEMICOLON
+   18     | kind . error SEMICOLON
 
     error  shift, and go to state 11
     ID     shift, and go to state 12
@@ -285,7 +306,7 @@ State 10
 
 State 11
 
-   16 decl: kind error . SEMICOLON
+   18 decl: kind error . SEMICOLON
 
     SEMICOLON  shift, and go to state 14
 
@@ -294,1015 +315,1280 @@ State 12
 
     5 function_decl: kind ID . LPAR kind RPAR SEMICOLON
     8 function_def: kind ID . LPAR kind ID RPAR $@1 body
-   38 var_list: ID . $@2 var_list_rep
+   10             | kind ID . LPAR error RPAR $@2 body
+   44 var_list: ID . $@4 var_list_rep
 
     LPAR  shift, and go to state 15
 
-    $default  reduce using rule 37 ($@2)
+    $default  reduce using rule 43 ($@4)
 
-    $@2  go to state 16
+    $@4  go to state 16
 
 
 State 13
 
-   15 decl: kind var_list . SEMICOLON
+   17 decl: kind var_list . SEMICOLON
 
     SEMICOLON  shift, and go to state 17
 
 
 State 14
 
-   16 decl: kind error SEMICOLON .
+   18 decl: kind error SEMICOLON .
 
-    $default  reduce using rule 16 (decl)
+    $default  reduce using rule 18 (decl)
 
 
 State 15
 
     5 function_decl: kind ID LPAR . kind RPAR SEMICOLON
     8 function_def: kind ID LPAR . kind ID RPAR $@1 body
+   10             | kind ID LPAR . error RPAR $@2 body
 
+    error     shift, and go to state 18
     KW_INT    shift, and go to state 4
     KW_FLOAT  shift, and go to state 5
 
-    kind  go to state 18
+    kind  go to state 19
 
 
 State 16
 
-   38 var_list: ID $@2 . var_list_rep
+   44 var_list: ID $@4 . var_list_rep
 
-    $default  reduce using rule 39 (var_list_rep)
+    $default  reduce using rule 45 (var_list_rep)
 
-    var_list_rep  go to state 19
+    var_list_rep  go to state 20
 
 
 State 17
 
-   15 decl: kind var_list SEMICOLON .
+   17 decl: kind var_list SEMICOLON .
 
-    $default  reduce using rule 15 (decl)
+    $default  reduce using rule 17 (decl)
 
 
 State 18
 
-    5 function_decl: kind ID LPAR kind . RPAR SEMICOLON
-    8 function_def: kind ID LPAR kind . ID RPAR $@1 body
+   10 function_def: kind ID LPAR error . RPAR $@2 body
 
-    ID    shift, and go to state 20
     RPAR  shift, and go to state 21
 
 
 State 19
 
-   38 var_list: ID $@2 var_list_rep .
-   40 var_list_rep: var_list_rep . COMMA ID
+    5 function_decl: kind ID LPAR kind . RPAR SEMICOLON
+    8 function_def: kind ID LPAR kind . ID RPAR $@1 body
 
-    COMMA  shift, and go to state 22
-
-    $default  reduce using rule 38 (var_list)
+    ID    shift, and go to state 22
+    RPAR  shift, and go to state 23
 
 
 State 20
 
-    8 function_def: kind ID LPAR kind ID . RPAR $@1 body
+   44 var_list: ID $@4 var_list_rep .
+   46 var_list_rep: var_list_rep . COMMA ID
 
-    RPAR  shift, and go to state 23
+    COMMA  shift, and go to state 24
+
+    $default  reduce using rule 44 (var_list)
 
 
 State 21
 
-    5 function_decl: kind ID LPAR kind RPAR . SEMICOLON
+   10 function_def: kind ID LPAR error RPAR . $@2 body
 
-    SEMICOLON  shift, and go to state 24
+    $default  reduce using rule 9 ($@2)
+
+    $@2  go to state 25
 
 
 State 22
 
-   40 var_list_rep: var_list_rep COMMA . ID
+    8 function_def: kind ID LPAR kind ID . RPAR $@1 body
 
-    ID  shift, and go to state 25
+    RPAR  shift, and go to state 26
 
 
 State 23
+
+    5 function_decl: kind ID LPAR kind RPAR . SEMICOLON
+
+    SEMICOLON  shift, and go to state 27
+
+
+State 24
+
+   46 var_list_rep: var_list_rep COMMA . ID
+
+    ID  shift, and go to state 28
+
+
+State 25
+
+   10 function_def: kind ID LPAR error RPAR $@2 . body
+
+    LBRACE  shift, and go to state 29
+
+    body  go to state 30
+
+
+State 26
 
     8 function_def: kind ID LPAR kind ID RPAR . $@1 body
 
     $default  reduce using rule 7 ($@1)
 
-    $@1  go to state 26
+    $@1  go to state 31
 
 
-State 24
+State 27
 
     5 function_decl: kind ID LPAR kind RPAR SEMICOLON .
 
     $default  reduce using rule 5 (function_decl)
 
 
-State 25
+State 28
 
-   40 var_list_rep: var_list_rep COMMA ID .
+   46 var_list_rep: var_list_rep COMMA ID .
 
-    $default  reduce using rule 40 (var_list_rep)
+    $default  reduce using rule 46 (var_list_rep)
 
 
-State 26
+State 29
+
+   11 body: LBRACE . decls stmts RBRACE
+
+    $default  reduce using rule 12 (decls)
+
+    decls  go to state 32
+
+
+State 30
+
+   10 function_def: kind ID LPAR error RPAR $@2 body .
+
+    $default  reduce using rule 10 (function_def)
+
+
+State 31
 
     8 function_def: kind ID LPAR kind ID RPAR $@1 . body
 
-    LBRACE  shift, and go to state 27
+    LBRACE  shift, and go to state 29
 
-    body  go to state 28
-
-
-State 27
-
-    9 body: LBRACE . decls stmts RBRACE
-
-    $default  reduce using rule 10 (decls)
-
-    decls  go to state 29
+    body  go to state 33
 
 
-State 28
+State 32
+
+   11 body: LBRACE decls . stmts RBRACE
+   13 decls: decls . decl
+
+    KW_INT    shift, and go to state 4
+    KW_FLOAT  shift, and go to state 5
+    LBRACE    shift, and go to state 34
+
+    $default  reduce using rule 14 (stmts)
+
+    stmts  go to state 35
+    decl   go to state 36
+    kind   go to state 37
+
+
+State 33
 
     8 function_def: kind ID LPAR kind ID RPAR $@1 body .
 
     $default  reduce using rule 8 (function_def)
 
 
-State 29
-
-    9 body: LBRACE decls . stmts RBRACE
-   11 decls: decls . decl
-
-    KW_INT    shift, and go to state 4
-    KW_FLOAT  shift, and go to state 5
-    LBRACE    shift, and go to state 30
-
-    $default  reduce using rule 12 (stmts)
-
-    stmts  go to state 31
-    decl   go to state 32
-    kind   go to state 33
-
-
-State 30
-
-   14 stmts: LBRACE . stmts RBRACE
-
-    LBRACE  shift, and go to state 30
-
-    $default  reduce using rule 12 (stmts)
-
-    stmts  go to state 34
-
-
-State 31
-
-    9 body: LBRACE decls stmts . RBRACE
-   13 stmts: stmts . stmt
-
-    ID         shift, and go to state 35
-    INT_LIT    shift, and go to state 36
-    FLOAT_LIT  shift, and go to state 37
-    KW_IF      shift, and go to state 38
-    KW_WHILE   shift, and go to state 39
-    KW_RETURN  shift, and go to state 40
-    KW_READ    shift, and go to state 41
-    KW_WRITE   shift, and go to state 42
-    LPAR       shift, and go to state 43
-    RBRACE     shift, and go to state 44
-    OP_MINUS   shift, and go to state 45
-
-    stmt           go to state 46
-    open_stmt      go to state 47
-    matched_stmt   go to state 48
-    expr           go to state 49
-    expr1          go to state 50
-    factor         go to state 51
-    function_call  go to state 52
-
-
-State 32
-
-   11 decls: decls decl .
-
-    $default  reduce using rule 11 (decls)
-
-
-State 33
-
-   15 decl: kind . var_list SEMICOLON
-   16     | kind . error SEMICOLON
-
-    error  shift, and go to state 11
-    ID     shift, and go to state 53
-
-    var_list  go to state 13
-
-
 State 34
 
-   13 stmts: stmts . stmt
-   14      | LBRACE stmts . RBRACE
+   16 stmts: LBRACE . stmts RBRACE
 
-    ID         shift, and go to state 35
-    INT_LIT    shift, and go to state 36
-    FLOAT_LIT  shift, and go to state 37
-    KW_IF      shift, and go to state 38
-    KW_WHILE   shift, and go to state 39
-    KW_RETURN  shift, and go to state 40
-    KW_READ    shift, and go to state 41
-    KW_WRITE   shift, and go to state 42
-    LPAR       shift, and go to state 43
-    RBRACE     shift, and go to state 54
-    OP_MINUS   shift, and go to state 45
+    LBRACE  shift, and go to state 34
 
-    stmt           go to state 46
-    open_stmt      go to state 47
-    matched_stmt   go to state 48
-    expr           go to state 49
-    expr1          go to state 50
-    factor         go to state 51
-    function_call  go to state 52
+    $default  reduce using rule 14 (stmts)
+
+    stmts  go to state 38
 
 
 State 35
 
-   47 expr: ID . OP_ASSIGN expr
-   59 factor: ID .
-   60 function_call: ID . LPAR expr RPAR
+   11 body: LBRACE decls stmts . RBRACE
+   15 stmts: stmts . stmt
 
-    LPAR       shift, and go to state 55
-    OP_ASSIGN  shift, and go to state 56
+    error      shift, and go to state 39
+    ID         shift, and go to state 40
+    INT_LIT    shift, and go to state 41
+    FLOAT_LIT  shift, and go to state 42
+    KW_IF      shift, and go to state 43
+    KW_WHILE   shift, and go to state 44
+    KW_RETURN  shift, and go to state 45
+    KW_READ    shift, and go to state 46
+    KW_WRITE   shift, and go to state 47
+    LPAR       shift, and go to state 48
+    RBRACE     shift, and go to state 49
+    OP_MINUS   shift, and go to state 50
 
-    $default  reduce using rule 59 (factor)
+    stmt           go to state 51
+    open_stmt      go to state 52
+    matched_stmt   go to state 53
+    expr           go to state 54
+    expr1          go to state 55
+    factor         go to state 56
+    function_call  go to state 57
 
 
 State 36
 
-   55 factor: INT_LIT .
+   13 decls: decls decl .
 
-    $default  reduce using rule 55 (factor)
+    $default  reduce using rule 13 (decls)
 
 
 State 37
 
-   56 factor: FLOAT_LIT .
+   17 decl: kind . var_list SEMICOLON
+   18     | kind . error SEMICOLON
 
-    $default  reduce using rule 56 (factor)
+    error  shift, and go to state 11
+    ID     shift, and go to state 58
+
+    var_list  go to state 13
 
 
 State 38
 
-   21 open_stmt: KW_IF . LPAR bool_expr RPAR stmt
-   22          | KW_IF . LPAR bool_expr RPAR matched_stmt KW_ELSE open_stmt
-   31 matched_stmt: KW_IF . LPAR bool_expr RPAR matched_stmt KW_ELSE matched_stmt
+   15 stmts: stmts . stmt
+   16      | LBRACE stmts . RBRACE
 
-    LPAR  shift, and go to state 57
+    error      shift, and go to state 39
+    ID         shift, and go to state 40
+    INT_LIT    shift, and go to state 41
+    FLOAT_LIT  shift, and go to state 42
+    KW_IF      shift, and go to state 43
+    KW_WHILE   shift, and go to state 44
+    KW_RETURN  shift, and go to state 45
+    KW_READ    shift, and go to state 46
+    KW_WRITE   shift, and go to state 47
+    LPAR       shift, and go to state 48
+    RBRACE     shift, and go to state 59
+    OP_MINUS   shift, and go to state 50
+
+    stmt           go to state 51
+    open_stmt      go to state 52
+    matched_stmt   go to state 53
+    expr           go to state 54
+    expr1          go to state 55
+    factor         go to state 56
+    function_call  go to state 57
 
 
 State 39
 
-   24 matched_stmt: KW_WHILE . LPAR bool_expr RPAR stmt
-   25             | KW_WHILE . LPAR bool_expr RPAR body
+   26 matched_stmt: error . SEMICOLON
 
-    LPAR  shift, and go to state 58
+    SEMICOLON  shift, and go to state 60
 
 
 State 40
 
-   30 matched_stmt: KW_RETURN . expr SEMICOLON
+   55 expr: ID . $@5 OP_ASSIGN expr
+   67 factor: ID .
+   68 function_call: ID . LPAR expr RPAR
 
-    ID         shift, and go to state 35
-    INT_LIT    shift, and go to state 36
-    FLOAT_LIT  shift, and go to state 37
-    LPAR       shift, and go to state 43
-    OP_MINUS   shift, and go to state 45
+    LPAR  shift, and go to state 61
 
-    expr           go to state 59
-    expr1          go to state 50
-    factor         go to state 51
-    function_call  go to state 52
+    OP_ASSIGN  reduce using rule 54 ($@5)
+    $default   reduce using rule 67 (factor)
+
+    $@5  go to state 62
 
 
 State 41
 
-   26 matched_stmt: KW_READ . var_list SEMICOLON
-   27             | KW_READ . error SEMICOLON
+   63 factor: INT_LIT .
 
-    error  shift, and go to state 60
-    ID     shift, and go to state 53
-
-    var_list  go to state 61
+    $default  reduce using rule 63 (factor)
 
 
 State 42
 
-   28 matched_stmt: KW_WRITE . write_expr_list SEMICOLON
-   29             | KW_WRITE . error SEMICOLON
+   64 factor: FLOAT_LIT .
 
-    error       shift, and go to state 62
-    ID          shift, and go to state 35
-    INT_LIT     shift, and go to state 36
-    FLOAT_LIT   shift, and go to state 37
-    STRING_LIT  shift, and go to state 63
-    LPAR        shift, and go to state 43
-    OP_MINUS    shift, and go to state 45
-
-    write_expr_list  go to state 64
-    wlist_unit       go to state 65
-    expr             go to state 66
-    expr1            go to state 50
-    factor           go to state 51
-    function_call    go to state 52
+    $default  reduce using rule 64 (factor)
 
 
 State 43
 
-   58 factor: LPAR . expr RPAR
+   23 open_stmt: KW_IF . LPAR bool_expr RPAR stmt
+   24          | KW_IF . LPAR bool_expr RPAR matched_stmt KW_ELSE open_stmt
+   36 matched_stmt: KW_IF . LPAR bool_expr RPAR matched_stmt KW_ELSE matched_stmt
+   37             | KW_IF . LPAR error RPAR matched_stmt KW_ELSE matched_stmt
 
-    ID         shift, and go to state 35
-    INT_LIT    shift, and go to state 36
-    FLOAT_LIT  shift, and go to state 37
-    LPAR       shift, and go to state 43
-    OP_MINUS   shift, and go to state 45
-
-    expr           go to state 67
-    expr1          go to state 50
-    factor         go to state 51
-    function_call  go to state 52
+    LPAR  shift, and go to state 63
 
 
 State 44
 
-    9 body: LBRACE decls stmts RBRACE .
+   27 matched_stmt: KW_WHILE . LPAR bool_expr RPAR stmt
+   28             | KW_WHILE . LPAR error
+   29             | KW_WHILE . LPAR bool_expr RPAR body
 
-    $default  reduce using rule 9 (body)
+    LPAR  shift, and go to state 64
 
 
 State 45
 
-   53 expr1: OP_MINUS . factor
+   35 matched_stmt: KW_RETURN . expr SEMICOLON
 
-    ID         shift, and go to state 68
-    INT_LIT    shift, and go to state 36
-    FLOAT_LIT  shift, and go to state 37
-    LPAR       shift, and go to state 43
+    ID         shift, and go to state 40
+    INT_LIT    shift, and go to state 41
+    FLOAT_LIT  shift, and go to state 42
+    LPAR       shift, and go to state 48
+    OP_MINUS   shift, and go to state 50
 
-    factor         go to state 69
-    function_call  go to state 52
+    expr           go to state 65
+    expr1          go to state 55
+    factor         go to state 56
+    function_call  go to state 57
 
 
 State 46
 
-   13 stmts: stmts stmt .
+   31 matched_stmt: KW_READ . $@3 var_list SEMICOLON
+   32             | KW_READ . error SEMICOLON
 
-    $default  reduce using rule 13 (stmts)
+    error  shift, and go to state 66
+
+    ID  reduce using rule 30 ($@3)
+
+    $@3  go to state 67
 
 
 State 47
 
-   20 stmt: open_stmt .
+   33 matched_stmt: KW_WRITE . write_expr_list SEMICOLON
+   34             | KW_WRITE . error SEMICOLON
 
-    $default  reduce using rule 20 (stmt)
+    error       shift, and go to state 68
+    ID          shift, and go to state 40
+    INT_LIT     shift, and go to state 41
+    FLOAT_LIT   shift, and go to state 42
+    STRING_LIT  shift, and go to state 69
+    LPAR        shift, and go to state 48
+    OP_MINUS    shift, and go to state 50
+
+    write_expr_list  go to state 70
+    wlist_unit       go to state 71
+    expr             go to state 72
+    expr1            go to state 55
+    factor           go to state 56
+    function_call    go to state 57
 
 
 State 48
 
-   19 stmt: matched_stmt .
+   66 factor: LPAR . expr RPAR
 
-    $default  reduce using rule 19 (stmt)
+    ID         shift, and go to state 40
+    INT_LIT    shift, and go to state 41
+    FLOAT_LIT  shift, and go to state 42
+    LPAR       shift, and go to state 48
+    OP_MINUS   shift, and go to state 50
+
+    expr           go to state 73
+    expr1          go to state 55
+    factor         go to state 56
+    function_call  go to state 57
 
 
 State 49
 
-   23 matched_stmt: expr . SEMICOLON
+   11 body: LBRACE decls stmts RBRACE .
 
-    SEMICOLON  shift, and go to state 70
+    $default  reduce using rule 11 (body)
 
 
 State 50
 
-   48 expr: expr1 .
-   49 expr1: expr1 . OP_PLUS expr1
-   50      | expr1 . OP_MINUS expr1
-   51      | expr1 . OP_MULT expr1
-   52      | expr1 . OP_DIV expr1
+   61 expr1: OP_MINUS . factor
 
-    OP_PLUS   shift, and go to state 71
-    OP_MINUS  shift, and go to state 72
-    OP_MULT   shift, and go to state 73
-    OP_DIV    shift, and go to state 74
+    ID         shift, and go to state 74
+    INT_LIT    shift, and go to state 41
+    FLOAT_LIT  shift, and go to state 42
+    LPAR       shift, and go to state 48
 
-    $default  reduce using rule 48 (expr)
+    factor         go to state 75
+    function_call  go to state 57
 
 
 State 51
 
-   54 expr1: factor .
+   15 stmts: stmts stmt .
 
-    $default  reduce using rule 54 (expr1)
+    $default  reduce using rule 15 (stmts)
 
 
 State 52
 
-   57 factor: function_call .
+   22 stmt: open_stmt .
 
-    $default  reduce using rule 57 (factor)
+    $default  reduce using rule 22 (stmt)
 
 
 State 53
 
-   38 var_list: ID . $@2 var_list_rep
+   21 stmt: matched_stmt .
 
-    $default  reduce using rule 37 ($@2)
-
-    $@2  go to state 16
+    $default  reduce using rule 21 (stmt)
 
 
 State 54
 
-   14 stmts: LBRACE stmts RBRACE .
+   25 matched_stmt: expr . SEMICOLON
 
-    $default  reduce using rule 14 (stmts)
+    SEMICOLON  shift, and go to state 76
 
 
 State 55
 
-   60 function_call: ID LPAR . expr RPAR
+   56 expr: expr1 .
+   57 expr1: expr1 . OP_PLUS expr1
+   58      | expr1 . OP_MINUS expr1
+   59      | expr1 . OP_MULT expr1
+   60      | expr1 . OP_DIV expr1
 
-    ID         shift, and go to state 35
-    INT_LIT    shift, and go to state 36
-    FLOAT_LIT  shift, and go to state 37
-    LPAR       shift, and go to state 43
-    OP_MINUS   shift, and go to state 45
+    OP_PLUS   shift, and go to state 77
+    OP_MINUS  shift, and go to state 78
+    OP_MULT   shift, and go to state 79
+    OP_DIV    shift, and go to state 80
 
-    expr           go to state 75
-    expr1          go to state 50
-    factor         go to state 51
-    function_call  go to state 52
+    $default  reduce using rule 56 (expr)
 
 
 State 56
 
-   47 expr: ID OP_ASSIGN . expr
+   62 expr1: factor .
 
-    ID         shift, and go to state 35
-    INT_LIT    shift, and go to state 36
-    FLOAT_LIT  shift, and go to state 37
-    LPAR       shift, and go to state 43
-    OP_MINUS   shift, and go to state 45
-
-    expr           go to state 76
-    expr1          go to state 50
-    factor         go to state 51
-    function_call  go to state 52
+    $default  reduce using rule 62 (expr1)
 
 
 State 57
 
-   21 open_stmt: KW_IF LPAR . bool_expr RPAR stmt
-   22          | KW_IF LPAR . bool_expr RPAR matched_stmt KW_ELSE open_stmt
-   31 matched_stmt: KW_IF LPAR . bool_expr RPAR matched_stmt KW_ELSE matched_stmt
+   65 factor: function_call .
 
-    ID         shift, and go to state 35
-    INT_LIT    shift, and go to state 36
-    FLOAT_LIT  shift, and go to state 37
-    LPAR       shift, and go to state 43
-    OP_MINUS   shift, and go to state 45
-
-    bool_expr      go to state 77
-    expr           go to state 78
-    expr1          go to state 50
-    factor         go to state 51
-    function_call  go to state 52
+    $default  reduce using rule 65 (factor)
 
 
 State 58
 
-   24 matched_stmt: KW_WHILE LPAR . bool_expr RPAR stmt
-   25             | KW_WHILE LPAR . bool_expr RPAR body
+   44 var_list: ID . $@4 var_list_rep
 
-    ID         shift, and go to state 35
-    INT_LIT    shift, and go to state 36
-    FLOAT_LIT  shift, and go to state 37
-    LPAR       shift, and go to state 43
-    OP_MINUS   shift, and go to state 45
+    $default  reduce using rule 43 ($@4)
 
-    bool_expr      go to state 79
-    expr           go to state 78
-    expr1          go to state 50
-    factor         go to state 51
-    function_call  go to state 52
+    $@4  go to state 16
 
 
 State 59
 
-   30 matched_stmt: KW_RETURN expr . SEMICOLON
+   16 stmts: LBRACE stmts RBRACE .
 
-    SEMICOLON  shift, and go to state 80
+    $default  reduce using rule 16 (stmts)
 
 
 State 60
 
-   27 matched_stmt: KW_READ error . SEMICOLON
-
-    SEMICOLON  shift, and go to state 81
-
-
-State 61
-
-   26 matched_stmt: KW_READ var_list . SEMICOLON
-
-    SEMICOLON  shift, and go to state 82
-
-
-State 62
-
-   29 matched_stmt: KW_WRITE error . SEMICOLON
-
-    SEMICOLON  shift, and go to state 83
-
-
-State 63
-
-   34 wlist_unit: STRING_LIT .
-
-    $default  reduce using rule 34 (wlist_unit)
-
-
-State 64
-
-   28 matched_stmt: KW_WRITE write_expr_list . SEMICOLON
-
-    SEMICOLON  shift, and go to state 84
-
-
-State 65
-
-   32 write_expr_list: wlist_unit . wlist_rep
-
-    $default  reduce using rule 35 (wlist_rep)
-
-    wlist_rep  go to state 85
-
-
-State 66
-
-   33 wlist_unit: expr .
-
-    $default  reduce using rule 33 (wlist_unit)
-
-
-State 67
-
-   58 factor: LPAR expr . RPAR
-
-    RPAR  shift, and go to state 86
-
-
-State 68
-
-   59 factor: ID .
-   60 function_call: ID . LPAR expr RPAR
-
-    LPAR  shift, and go to state 55
-
-    $default  reduce using rule 59 (factor)
-
-
-State 69
-
-   53 expr1: OP_MINUS factor .
-
-    $default  reduce using rule 53 (expr1)
-
-
-State 70
-
-   23 matched_stmt: expr SEMICOLON .
-
-    $default  reduce using rule 23 (matched_stmt)
-
-
-State 71
-
-   49 expr1: expr1 OP_PLUS . expr1
-
-    ID         shift, and go to state 68
-    INT_LIT    shift, and go to state 36
-    FLOAT_LIT  shift, and go to state 37
-    LPAR       shift, and go to state 43
-    OP_MINUS   shift, and go to state 45
-
-    expr1          go to state 87
-    factor         go to state 51
-    function_call  go to state 52
-
-
-State 72
-
-   50 expr1: expr1 OP_MINUS . expr1
-
-    ID         shift, and go to state 68
-    INT_LIT    shift, and go to state 36
-    FLOAT_LIT  shift, and go to state 37
-    LPAR       shift, and go to state 43
-    OP_MINUS   shift, and go to state 45
-
-    expr1          go to state 88
-    factor         go to state 51
-    function_call  go to state 52
-
-
-State 73
-
-   51 expr1: expr1 OP_MULT . expr1
-
-    ID         shift, and go to state 68
-    INT_LIT    shift, and go to state 36
-    FLOAT_LIT  shift, and go to state 37
-    LPAR       shift, and go to state 43
-    OP_MINUS   shift, and go to state 45
-
-    expr1          go to state 89
-    factor         go to state 51
-    function_call  go to state 52
-
-
-State 74
-
-   52 expr1: expr1 OP_DIV . expr1
-
-    ID         shift, and go to state 68
-    INT_LIT    shift, and go to state 36
-    FLOAT_LIT  shift, and go to state 37
-    LPAR       shift, and go to state 43
-    OP_MINUS   shift, and go to state 45
-
-    expr1          go to state 90
-    factor         go to state 51
-    function_call  go to state 52
-
-
-State 75
-
-   60 function_call: ID LPAR expr . RPAR
-
-    RPAR  shift, and go to state 91
-
-
-State 76
-
-   47 expr: ID OP_ASSIGN expr .
-
-    $default  reduce using rule 47 (expr)
-
-
-State 77
-
-   21 open_stmt: KW_IF LPAR bool_expr . RPAR stmt
-   22          | KW_IF LPAR bool_expr . RPAR matched_stmt KW_ELSE open_stmt
-   31 matched_stmt: KW_IF LPAR bool_expr . RPAR matched_stmt KW_ELSE matched_stmt
-
-    RPAR  shift, and go to state 92
-
-
-State 78
-
-   41 bool_expr: expr . bool_op expr
-
-    OP_EQ  shift, and go to state 93
-    OP_LT  shift, and go to state 94
-    OP_LE  shift, and go to state 95
-    OP_GT  shift, and go to state 96
-    OP_GE  shift, and go to state 97
-
-    bool_op  go to state 98
-
-
-State 79
-
-   24 matched_stmt: KW_WHILE LPAR bool_expr . RPAR stmt
-   25             | KW_WHILE LPAR bool_expr . RPAR body
-
-    RPAR  shift, and go to state 99
-
-
-State 80
-
-   30 matched_stmt: KW_RETURN expr SEMICOLON .
-
-    $default  reduce using rule 30 (matched_stmt)
-
-
-State 81
-
-   27 matched_stmt: KW_READ error SEMICOLON .
-
-    $default  reduce using rule 27 (matched_stmt)
-
-
-State 82
-
-   26 matched_stmt: KW_READ var_list SEMICOLON .
+   26 matched_stmt: error SEMICOLON .
 
     $default  reduce using rule 26 (matched_stmt)
 
 
-State 83
+State 61
 
-   29 matched_stmt: KW_WRITE error SEMICOLON .
+   68 function_call: ID LPAR . expr RPAR
 
-    $default  reduce using rule 29 (matched_stmt)
+    ID         shift, and go to state 40
+    INT_LIT    shift, and go to state 41
+    FLOAT_LIT  shift, and go to state 42
+    LPAR       shift, and go to state 48
+    OP_MINUS   shift, and go to state 50
 
+    expr           go to state 81
+    expr1          go to state 55
+    factor         go to state 56
+    function_call  go to state 57
 
-State 84
 
-   28 matched_stmt: KW_WRITE write_expr_list SEMICOLON .
+State 62
 
-    $default  reduce using rule 28 (matched_stmt)
+   55 expr: ID $@5 . OP_ASSIGN expr
 
+    OP_ASSIGN  shift, and go to state 82
 
-State 85
 
-   32 write_expr_list: wlist_unit wlist_rep .
-   36 wlist_rep: wlist_rep . COMMA wlist_unit
+State 63
 
-    COMMA  shift, and go to state 100
+   23 open_stmt: KW_IF LPAR . bool_expr RPAR stmt
+   24          | KW_IF LPAR . bool_expr RPAR matched_stmt KW_ELSE open_stmt
+   36 matched_stmt: KW_IF LPAR . bool_expr RPAR matched_stmt KW_ELSE matched_stmt
+   37             | KW_IF LPAR . error RPAR matched_stmt KW_ELSE matched_stmt
 
-    $default  reduce using rule 32 (write_expr_list)
+    error      shift, and go to state 83
+    ID         shift, and go to state 40
+    INT_LIT    shift, and go to state 41
+    FLOAT_LIT  shift, and go to state 42
+    LPAR       shift, and go to state 48
+    OP_MINUS   shift, and go to state 50
 
+    bool_expr      go to state 84
+    expr           go to state 85
+    expr1          go to state 55
+    factor         go to state 56
+    function_call  go to state 57
 
-State 86
 
-   58 factor: LPAR expr RPAR .
+State 64
 
-    $default  reduce using rule 58 (factor)
+   27 matched_stmt: KW_WHILE LPAR . bool_expr RPAR stmt
+   28             | KW_WHILE LPAR . error
+   29             | KW_WHILE LPAR . bool_expr RPAR body
 
+    error      shift, and go to state 86
+    ID         shift, and go to state 40
+    INT_LIT    shift, and go to state 41
+    FLOAT_LIT  shift, and go to state 42
+    LPAR       shift, and go to state 48
+    OP_MINUS   shift, and go to state 50
 
-State 87
+    bool_expr      go to state 87
+    expr           go to state 85
+    expr1          go to state 55
+    factor         go to state 56
+    function_call  go to state 57
 
-   49 expr1: expr1 . OP_PLUS expr1
-   49      | expr1 OP_PLUS expr1 .
-   50      | expr1 . OP_MINUS expr1
-   51      | expr1 . OP_MULT expr1
-   52      | expr1 . OP_DIV expr1
 
-    OP_MULT  shift, and go to state 73
-    OP_DIV   shift, and go to state 74
+State 65
 
-    $default  reduce using rule 49 (expr1)
+   35 matched_stmt: KW_RETURN expr . SEMICOLON
 
+    SEMICOLON  shift, and go to state 88
 
-State 88
 
-   49 expr1: expr1 . OP_PLUS expr1
-   50      | expr1 . OP_MINUS expr1
-   50      | expr1 OP_MINUS expr1 .
-   51      | expr1 . OP_MULT expr1
-   52      | expr1 . OP_DIV expr1
+State 66
 
-    OP_MULT  shift, and go to state 73
-    OP_DIV   shift, and go to state 74
+   32 matched_stmt: KW_READ error . SEMICOLON
 
-    $default  reduce using rule 50 (expr1)
+    SEMICOLON  shift, and go to state 89
 
 
-State 89
+State 67
 
-   49 expr1: expr1 . OP_PLUS expr1
-   50      | expr1 . OP_MINUS expr1
-   51      | expr1 . OP_MULT expr1
-   51      | expr1 OP_MULT expr1 .
-   52      | expr1 . OP_DIV expr1
+   31 matched_stmt: KW_READ $@3 . var_list SEMICOLON
 
-    $default  reduce using rule 51 (expr1)
+    ID  shift, and go to state 58
 
+    var_list  go to state 90
 
-State 90
 
-   49 expr1: expr1 . OP_PLUS expr1
-   50      | expr1 . OP_MINUS expr1
-   51      | expr1 . OP_MULT expr1
-   52      | expr1 . OP_DIV expr1
-   52      | expr1 OP_DIV expr1 .
+State 68
 
-    $default  reduce using rule 52 (expr1)
+   34 matched_stmt: KW_WRITE error . SEMICOLON
 
+    SEMICOLON  shift, and go to state 91
 
-State 91
 
-   60 function_call: ID LPAR expr RPAR .
+State 69
 
-    $default  reduce using rule 60 (function_call)
+   40 wlist_unit: STRING_LIT .
 
+    $default  reduce using rule 40 (wlist_unit)
 
-State 92
 
-   21 open_stmt: KW_IF LPAR bool_expr RPAR . stmt
-   22          | KW_IF LPAR bool_expr RPAR . matched_stmt KW_ELSE open_stmt
-   31 matched_stmt: KW_IF LPAR bool_expr RPAR . matched_stmt KW_ELSE matched_stmt
+State 70
 
-    ID         shift, and go to state 35
-    INT_LIT    shift, and go to state 36
-    FLOAT_LIT  shift, and go to state 37
-    KW_IF      shift, and go to state 38
-    KW_WHILE   shift, and go to state 39
-    KW_RETURN  shift, and go to state 40
-    KW_READ    shift, and go to state 41
-    KW_WRITE   shift, and go to state 42
-    LPAR       shift, and go to state 43
-    OP_MINUS   shift, and go to state 45
+   33 matched_stmt: KW_WRITE write_expr_list . SEMICOLON
 
-    stmt           go to state 101
-    open_stmt      go to state 47
-    matched_stmt   go to state 102
-    expr           go to state 49
-    expr1          go to state 50
-    factor         go to state 51
-    function_call  go to state 52
+    SEMICOLON  shift, and go to state 92
 
 
-State 93
+State 71
 
-   42 bool_op: OP_EQ .
+   38 write_expr_list: wlist_unit . wlist_rep
 
-    $default  reduce using rule 42 (bool_op)
+    $default  reduce using rule 41 (wlist_rep)
 
+    wlist_rep  go to state 93
 
-State 94
 
-   43 bool_op: OP_LT .
+State 72
 
-    $default  reduce using rule 43 (bool_op)
+   39 wlist_unit: expr .
 
+    $default  reduce using rule 39 (wlist_unit)
 
-State 95
 
-   44 bool_op: OP_LE .
+State 73
 
-    $default  reduce using rule 44 (bool_op)
+   66 factor: LPAR expr . RPAR
 
+    RPAR  shift, and go to state 94
 
-State 96
 
-   45 bool_op: OP_GT .
+State 74
 
-    $default  reduce using rule 45 (bool_op)
+   67 factor: ID .
+   68 function_call: ID . LPAR expr RPAR
 
+    LPAR  shift, and go to state 61
 
-State 97
+    $default  reduce using rule 67 (factor)
 
-   46 bool_op: OP_GE .
 
-    $default  reduce using rule 46 (bool_op)
+State 75
 
+   61 expr1: OP_MINUS factor .
 
-State 98
+    $default  reduce using rule 61 (expr1)
 
-   41 bool_expr: expr bool_op . expr
 
-    ID         shift, and go to state 35
-    INT_LIT    shift, and go to state 36
-    FLOAT_LIT  shift, and go to state 37
-    LPAR       shift, and go to state 43
-    OP_MINUS   shift, and go to state 45
+State 76
 
-    expr           go to state 103
-    expr1          go to state 50
-    factor         go to state 51
-    function_call  go to state 52
-
-
-State 99
-
-   24 matched_stmt: KW_WHILE LPAR bool_expr RPAR . stmt
-   25             | KW_WHILE LPAR bool_expr RPAR . body
-
-    ID         shift, and go to state 35
-    INT_LIT    shift, and go to state 36
-    FLOAT_LIT  shift, and go to state 37
-    KW_IF      shift, and go to state 38
-    KW_WHILE   shift, and go to state 39
-    KW_RETURN  shift, and go to state 40
-    KW_READ    shift, and go to state 41
-    KW_WRITE   shift, and go to state 42
-    LPAR       shift, and go to state 43
-    LBRACE     shift, and go to state 27
-    OP_MINUS   shift, and go to state 45
-
-    body           go to state 104
-    stmt           go to state 105
-    open_stmt      go to state 47
-    matched_stmt   go to state 48
-    expr           go to state 49
-    expr1          go to state 50
-    factor         go to state 51
-    function_call  go to state 52
-
-
-State 100
-
-   36 wlist_rep: wlist_rep COMMA . wlist_unit
-
-    ID          shift, and go to state 35
-    INT_LIT     shift, and go to state 36
-    FLOAT_LIT   shift, and go to state 37
-    STRING_LIT  shift, and go to state 63
-    LPAR        shift, and go to state 43
-    OP_MINUS    shift, and go to state 45
-
-    wlist_unit     go to state 106
-    expr           go to state 66
-    expr1          go to state 50
-    factor         go to state 51
-    function_call  go to state 52
-
-
-State 101
-
-   21 open_stmt: KW_IF LPAR bool_expr RPAR stmt .
-
-    $default  reduce using rule 21 (open_stmt)
-
-
-State 102
-
-   19 stmt: matched_stmt .
-   22 open_stmt: KW_IF LPAR bool_expr RPAR matched_stmt . KW_ELSE open_stmt
-   31 matched_stmt: KW_IF LPAR bool_expr RPAR matched_stmt . KW_ELSE matched_stmt
-
-    KW_ELSE  shift, and go to state 107
-
-    KW_ELSE   [reduce using rule 19 (stmt)]
-    $default  reduce using rule 19 (stmt)
-
-
-State 103
-
-   41 bool_expr: expr bool_op expr .
-
-    $default  reduce using rule 41 (bool_expr)
-
-
-State 104
-
-   25 matched_stmt: KW_WHILE LPAR bool_expr RPAR body .
+   25 matched_stmt: expr SEMICOLON .
 
     $default  reduce using rule 25 (matched_stmt)
 
 
+State 77
+
+   57 expr1: expr1 OP_PLUS . expr1
+
+    ID         shift, and go to state 74
+    INT_LIT    shift, and go to state 41
+    FLOAT_LIT  shift, and go to state 42
+    LPAR       shift, and go to state 48
+    OP_MINUS   shift, and go to state 50
+
+    expr1          go to state 95
+    factor         go to state 56
+    function_call  go to state 57
+
+
+State 78
+
+   58 expr1: expr1 OP_MINUS . expr1
+
+    ID         shift, and go to state 74
+    INT_LIT    shift, and go to state 41
+    FLOAT_LIT  shift, and go to state 42
+    LPAR       shift, and go to state 48
+    OP_MINUS   shift, and go to state 50
+
+    expr1          go to state 96
+    factor         go to state 56
+    function_call  go to state 57
+
+
+State 79
+
+   59 expr1: expr1 OP_MULT . expr1
+
+    ID         shift, and go to state 74
+    INT_LIT    shift, and go to state 41
+    FLOAT_LIT  shift, and go to state 42
+    LPAR       shift, and go to state 48
+    OP_MINUS   shift, and go to state 50
+
+    expr1          go to state 97
+    factor         go to state 56
+    function_call  go to state 57
+
+
+State 80
+
+   60 expr1: expr1 OP_DIV . expr1
+
+    ID         shift, and go to state 74
+    INT_LIT    shift, and go to state 41
+    FLOAT_LIT  shift, and go to state 42
+    LPAR       shift, and go to state 48
+    OP_MINUS   shift, and go to state 50
+
+    expr1          go to state 98
+    factor         go to state 56
+    function_call  go to state 57
+
+
+State 81
+
+   68 function_call: ID LPAR expr . RPAR
+
+    RPAR  shift, and go to state 99
+
+
+State 82
+
+   55 expr: ID $@5 OP_ASSIGN . expr
+
+    ID         shift, and go to state 40
+    INT_LIT    shift, and go to state 41
+    FLOAT_LIT  shift, and go to state 42
+    LPAR       shift, and go to state 48
+    OP_MINUS   shift, and go to state 50
+
+    expr           go to state 100
+    expr1          go to state 55
+    factor         go to state 56
+    function_call  go to state 57
+
+
+State 83
+
+   37 matched_stmt: KW_IF LPAR error . RPAR matched_stmt KW_ELSE matched_stmt
+
+    RPAR  shift, and go to state 101
+
+
+State 84
+
+   23 open_stmt: KW_IF LPAR bool_expr . RPAR stmt
+   24          | KW_IF LPAR bool_expr . RPAR matched_stmt KW_ELSE open_stmt
+   36 matched_stmt: KW_IF LPAR bool_expr . RPAR matched_stmt KW_ELSE matched_stmt
+
+    RPAR  shift, and go to state 102
+
+
+State 85
+
+   47 bool_expr: expr . bool_op expr
+   48          | expr . error expr
+
+    error  shift, and go to state 103
+    OP_EQ  shift, and go to state 104
+    OP_LT  shift, and go to state 105
+    OP_LE  shift, and go to state 106
+    OP_GT  shift, and go to state 107
+    OP_GE  shift, and go to state 108
+
+    bool_op  go to state 109
+
+
+State 86
+
+   28 matched_stmt: KW_WHILE LPAR error .
+
+    $default  reduce using rule 28 (matched_stmt)
+
+
+State 87
+
+   27 matched_stmt: KW_WHILE LPAR bool_expr . RPAR stmt
+   29             | KW_WHILE LPAR bool_expr . RPAR body
+
+    RPAR  shift, and go to state 110
+
+
+State 88
+
+   35 matched_stmt: KW_RETURN expr SEMICOLON .
+
+    $default  reduce using rule 35 (matched_stmt)
+
+
+State 89
+
+   32 matched_stmt: KW_READ error SEMICOLON .
+
+    $default  reduce using rule 32 (matched_stmt)
+
+
+State 90
+
+   31 matched_stmt: KW_READ $@3 var_list . SEMICOLON
+
+    SEMICOLON  shift, and go to state 111
+
+
+State 91
+
+   34 matched_stmt: KW_WRITE error SEMICOLON .
+
+    $default  reduce using rule 34 (matched_stmt)
+
+
+State 92
+
+   33 matched_stmt: KW_WRITE write_expr_list SEMICOLON .
+
+    $default  reduce using rule 33 (matched_stmt)
+
+
+State 93
+
+   38 write_expr_list: wlist_unit wlist_rep .
+   42 wlist_rep: wlist_rep . COMMA wlist_unit
+
+    COMMA  shift, and go to state 112
+
+    $default  reduce using rule 38 (write_expr_list)
+
+
+State 94
+
+   66 factor: LPAR expr RPAR .
+
+    $default  reduce using rule 66 (factor)
+
+
+State 95
+
+   57 expr1: expr1 . OP_PLUS expr1
+   57      | expr1 OP_PLUS expr1 .
+   58      | expr1 . OP_MINUS expr1
+   59      | expr1 . OP_MULT expr1
+   60      | expr1 . OP_DIV expr1
+
+    OP_MULT  shift, and go to state 79
+    OP_DIV   shift, and go to state 80
+
+    $default  reduce using rule 57 (expr1)
+
+
+State 96
+
+   57 expr1: expr1 . OP_PLUS expr1
+   58      | expr1 . OP_MINUS expr1
+   58      | expr1 OP_MINUS expr1 .
+   59      | expr1 . OP_MULT expr1
+   60      | expr1 . OP_DIV expr1
+
+    OP_MULT  shift, and go to state 79
+    OP_DIV   shift, and go to state 80
+
+    $default  reduce using rule 58 (expr1)
+
+
+State 97
+
+   57 expr1: expr1 . OP_PLUS expr1
+   58      | expr1 . OP_MINUS expr1
+   59      | expr1 . OP_MULT expr1
+   59      | expr1 OP_MULT expr1 .
+   60      | expr1 . OP_DIV expr1
+
+    $default  reduce using rule 59 (expr1)
+
+
+State 98
+
+   57 expr1: expr1 . OP_PLUS expr1
+   58      | expr1 . OP_MINUS expr1
+   59      | expr1 . OP_MULT expr1
+   60      | expr1 . OP_DIV expr1
+   60      | expr1 OP_DIV expr1 .
+
+    $default  reduce using rule 60 (expr1)
+
+
+State 99
+
+   68 function_call: ID LPAR expr RPAR .
+
+    $default  reduce using rule 68 (function_call)
+
+
+State 100
+
+   55 expr: ID $@5 OP_ASSIGN expr .
+
+    $default  reduce using rule 55 (expr)
+
+
+State 101
+
+   37 matched_stmt: KW_IF LPAR error RPAR . matched_stmt KW_ELSE matched_stmt
+
+    error      shift, and go to state 39
+    ID         shift, and go to state 40
+    INT_LIT    shift, and go to state 41
+    FLOAT_LIT  shift, and go to state 42
+    KW_IF      shift, and go to state 113
+    KW_WHILE   shift, and go to state 44
+    KW_RETURN  shift, and go to state 45
+    KW_READ    shift, and go to state 46
+    KW_WRITE   shift, and go to state 47
+    LPAR       shift, and go to state 48
+    OP_MINUS   shift, and go to state 50
+
+    matched_stmt   go to state 114
+    expr           go to state 54
+    expr1          go to state 55
+    factor         go to state 56
+    function_call  go to state 57
+
+
+State 102
+
+   23 open_stmt: KW_IF LPAR bool_expr RPAR . stmt
+   24          | KW_IF LPAR bool_expr RPAR . matched_stmt KW_ELSE open_stmt
+   36 matched_stmt: KW_IF LPAR bool_expr RPAR . matched_stmt KW_ELSE matched_stmt
+
+    error      shift, and go to state 39
+    ID         shift, and go to state 40
+    INT_LIT    shift, and go to state 41
+    FLOAT_LIT  shift, and go to state 42
+    KW_IF      shift, and go to state 43
+    KW_WHILE   shift, and go to state 44
+    KW_RETURN  shift, and go to state 45
+    KW_READ    shift, and go to state 46
+    KW_WRITE   shift, and go to state 47
+    LPAR       shift, and go to state 48
+    OP_MINUS   shift, and go to state 50
+
+    stmt           go to state 115
+    open_stmt      go to state 52
+    matched_stmt   go to state 116
+    expr           go to state 54
+    expr1          go to state 55
+    factor         go to state 56
+    function_call  go to state 57
+
+
+State 103
+
+   48 bool_expr: expr error . expr
+
+    ID         shift, and go to state 40
+    INT_LIT    shift, and go to state 41
+    FLOAT_LIT  shift, and go to state 42
+    LPAR       shift, and go to state 48
+    OP_MINUS   shift, and go to state 50
+
+    expr           go to state 117
+    expr1          go to state 55
+    factor         go to state 56
+    function_call  go to state 57
+
+
+State 104
+
+   49 bool_op: OP_EQ .
+
+    $default  reduce using rule 49 (bool_op)
+
+
 State 105
 
-   24 matched_stmt: KW_WHILE LPAR bool_expr RPAR stmt .
+   50 bool_op: OP_LT .
 
-    $default  reduce using rule 24 (matched_stmt)
+    $default  reduce using rule 50 (bool_op)
 
 
 State 106
 
-   36 wlist_rep: wlist_rep COMMA wlist_unit .
+   51 bool_op: OP_LE .
 
-    $default  reduce using rule 36 (wlist_rep)
+    $default  reduce using rule 51 (bool_op)
 
 
 State 107
 
-   22 open_stmt: KW_IF LPAR bool_expr RPAR matched_stmt KW_ELSE . open_stmt
-   31 matched_stmt: KW_IF LPAR bool_expr RPAR matched_stmt KW_ELSE . matched_stmt
+   52 bool_op: OP_GT .
 
-    ID         shift, and go to state 35
-    INT_LIT    shift, and go to state 36
-    FLOAT_LIT  shift, and go to state 37
-    KW_IF      shift, and go to state 38
-    KW_WHILE   shift, and go to state 39
-    KW_RETURN  shift, and go to state 40
-    KW_READ    shift, and go to state 41
-    KW_WRITE   shift, and go to state 42
-    LPAR       shift, and go to state 43
-    OP_MINUS   shift, and go to state 45
-
-    open_stmt      go to state 108
-    matched_stmt   go to state 109
-    expr           go to state 49
-    expr1          go to state 50
-    factor         go to state 51
-    function_call  go to state 52
+    $default  reduce using rule 52 (bool_op)
 
 
 State 108
 
-   22 open_stmt: KW_IF LPAR bool_expr RPAR matched_stmt KW_ELSE open_stmt .
+   53 bool_op: OP_GE .
 
-    $default  reduce using rule 22 (open_stmt)
+    $default  reduce using rule 53 (bool_op)
 
 
 State 109
 
-   31 matched_stmt: KW_IF LPAR bool_expr RPAR matched_stmt KW_ELSE matched_stmt .
+   47 bool_expr: expr bool_op . expr
+
+    ID         shift, and go to state 40
+    INT_LIT    shift, and go to state 41
+    FLOAT_LIT  shift, and go to state 42
+    LPAR       shift, and go to state 48
+    OP_MINUS   shift, and go to state 50
+
+    expr           go to state 118
+    expr1          go to state 55
+    factor         go to state 56
+    function_call  go to state 57
+
+
+State 110
+
+   27 matched_stmt: KW_WHILE LPAR bool_expr RPAR . stmt
+   29             | KW_WHILE LPAR bool_expr RPAR . body
+
+    error      shift, and go to state 39
+    ID         shift, and go to state 40
+    INT_LIT    shift, and go to state 41
+    FLOAT_LIT  shift, and go to state 42
+    KW_IF      shift, and go to state 43
+    KW_WHILE   shift, and go to state 44
+    KW_RETURN  shift, and go to state 45
+    KW_READ    shift, and go to state 46
+    KW_WRITE   shift, and go to state 47
+    LPAR       shift, and go to state 48
+    LBRACE     shift, and go to state 29
+    OP_MINUS   shift, and go to state 50
+
+    body           go to state 119
+    stmt           go to state 120
+    open_stmt      go to state 52
+    matched_stmt   go to state 53
+    expr           go to state 54
+    expr1          go to state 55
+    factor         go to state 56
+    function_call  go to state 57
+
+
+State 111
+
+   31 matched_stmt: KW_READ $@3 var_list SEMICOLON .
 
     $default  reduce using rule 31 (matched_stmt)
+
+
+State 112
+
+   42 wlist_rep: wlist_rep COMMA . wlist_unit
+
+    ID          shift, and go to state 40
+    INT_LIT     shift, and go to state 41
+    FLOAT_LIT   shift, and go to state 42
+    STRING_LIT  shift, and go to state 69
+    LPAR        shift, and go to state 48
+    OP_MINUS    shift, and go to state 50
+
+    wlist_unit     go to state 121
+    expr           go to state 72
+    expr1          go to state 55
+    factor         go to state 56
+    function_call  go to state 57
+
+
+State 113
+
+   36 matched_stmt: KW_IF . LPAR bool_expr RPAR matched_stmt KW_ELSE matched_stmt
+   37             | KW_IF . LPAR error RPAR matched_stmt KW_ELSE matched_stmt
+
+    LPAR  shift, and go to state 122
+
+
+State 114
+
+   37 matched_stmt: KW_IF LPAR error RPAR matched_stmt . KW_ELSE matched_stmt
+
+    KW_ELSE  shift, and go to state 123
+
+
+State 115
+
+   23 open_stmt: KW_IF LPAR bool_expr RPAR stmt .
+
+    $default  reduce using rule 23 (open_stmt)
+
+
+State 116
+
+   21 stmt: matched_stmt .
+   24 open_stmt: KW_IF LPAR bool_expr RPAR matched_stmt . KW_ELSE open_stmt
+   36 matched_stmt: KW_IF LPAR bool_expr RPAR matched_stmt . KW_ELSE matched_stmt
+
+    KW_ELSE  shift, and go to state 124
+
+    KW_ELSE   [reduce using rule 21 (stmt)]
+    $default  reduce using rule 21 (stmt)
+
+
+State 117
+
+   48 bool_expr: expr error expr .
+
+    $default  reduce using rule 48 (bool_expr)
+
+
+State 118
+
+   47 bool_expr: expr bool_op expr .
+
+    $default  reduce using rule 47 (bool_expr)
+
+
+State 119
+
+   29 matched_stmt: KW_WHILE LPAR bool_expr RPAR body .
+
+    $default  reduce using rule 29 (matched_stmt)
+
+
+State 120
+
+   27 matched_stmt: KW_WHILE LPAR bool_expr RPAR stmt .
+
+    $default  reduce using rule 27 (matched_stmt)
+
+
+State 121
+
+   42 wlist_rep: wlist_rep COMMA wlist_unit .
+
+    $default  reduce using rule 42 (wlist_rep)
+
+
+State 122
+
+   36 matched_stmt: KW_IF LPAR . bool_expr RPAR matched_stmt KW_ELSE matched_stmt
+   37             | KW_IF LPAR . error RPAR matched_stmt KW_ELSE matched_stmt
+
+    error      shift, and go to state 83
+    ID         shift, and go to state 40
+    INT_LIT    shift, and go to state 41
+    FLOAT_LIT  shift, and go to state 42
+    LPAR       shift, and go to state 48
+    OP_MINUS   shift, and go to state 50
+
+    bool_expr      go to state 125
+    expr           go to state 85
+    expr1          go to state 55
+    factor         go to state 56
+    function_call  go to state 57
+
+
+State 123
+
+   37 matched_stmt: KW_IF LPAR error RPAR matched_stmt KW_ELSE . matched_stmt
+
+    error      shift, and go to state 39
+    ID         shift, and go to state 40
+    INT_LIT    shift, and go to state 41
+    FLOAT_LIT  shift, and go to state 42
+    KW_IF      shift, and go to state 113
+    KW_WHILE   shift, and go to state 44
+    KW_RETURN  shift, and go to state 45
+    KW_READ    shift, and go to state 46
+    KW_WRITE   shift, and go to state 47
+    LPAR       shift, and go to state 48
+    OP_MINUS   shift, and go to state 50
+
+    matched_stmt   go to state 126
+    expr           go to state 54
+    expr1          go to state 55
+    factor         go to state 56
+    function_call  go to state 57
+
+
+State 124
+
+   24 open_stmt: KW_IF LPAR bool_expr RPAR matched_stmt KW_ELSE . open_stmt
+   36 matched_stmt: KW_IF LPAR bool_expr RPAR matched_stmt KW_ELSE . matched_stmt
+
+    error      shift, and go to state 39
+    ID         shift, and go to state 40
+    INT_LIT    shift, and go to state 41
+    FLOAT_LIT  shift, and go to state 42
+    KW_IF      shift, and go to state 43
+    KW_WHILE   shift, and go to state 44
+    KW_RETURN  shift, and go to state 45
+    KW_READ    shift, and go to state 46
+    KW_WRITE   shift, and go to state 47
+    LPAR       shift, and go to state 48
+    OP_MINUS   shift, and go to state 50
+
+    open_stmt      go to state 127
+    matched_stmt   go to state 128
+    expr           go to state 54
+    expr1          go to state 55
+    factor         go to state 56
+    function_call  go to state 57
+
+
+State 125
+
+   36 matched_stmt: KW_IF LPAR bool_expr . RPAR matched_stmt KW_ELSE matched_stmt
+
+    RPAR  shift, and go to state 129
+
+
+State 126
+
+   37 matched_stmt: KW_IF LPAR error RPAR matched_stmt KW_ELSE matched_stmt .
+
+    $default  reduce using rule 37 (matched_stmt)
+
+
+State 127
+
+   24 open_stmt: KW_IF LPAR bool_expr RPAR matched_stmt KW_ELSE open_stmt .
+
+    $default  reduce using rule 24 (open_stmt)
+
+
+State 128
+
+   36 matched_stmt: KW_IF LPAR bool_expr RPAR matched_stmt KW_ELSE matched_stmt .
+
+    $default  reduce using rule 36 (matched_stmt)
+
+
+State 129
+
+   36 matched_stmt: KW_IF LPAR bool_expr RPAR . matched_stmt KW_ELSE matched_stmt
+
+    error      shift, and go to state 39
+    ID         shift, and go to state 40
+    INT_LIT    shift, and go to state 41
+    FLOAT_LIT  shift, and go to state 42
+    KW_IF      shift, and go to state 113
+    KW_WHILE   shift, and go to state 44
+    KW_RETURN  shift, and go to state 45
+    KW_READ    shift, and go to state 46
+    KW_WRITE   shift, and go to state 47
+    LPAR       shift, and go to state 48
+    OP_MINUS   shift, and go to state 50
+
+    matched_stmt   go to state 130
+    expr           go to state 54
+    expr1          go to state 55
+    factor         go to state 56
+    function_call  go to state 57
+
+
+State 130
+
+   36 matched_stmt: KW_IF LPAR bool_expr RPAR matched_stmt . KW_ELSE matched_stmt
+
+    KW_ELSE  shift, and go to state 131
+
+
+State 131
+
+   36 matched_stmt: KW_IF LPAR bool_expr RPAR matched_stmt KW_ELSE . matched_stmt
+
+    error      shift, and go to state 39
+    ID         shift, and go to state 40
+    INT_LIT    shift, and go to state 41
+    FLOAT_LIT  shift, and go to state 42
+    KW_IF      shift, and go to state 113
+    KW_WHILE   shift, and go to state 44
+    KW_RETURN  shift, and go to state 45
+    KW_READ    shift, and go to state 46
+    KW_WRITE   shift, and go to state 47
+    LPAR       shift, and go to state 48
+    OP_MINUS   shift, and go to state 50
+
+    matched_stmt   go to state 128
+    expr           go to state 54
+    expr1          go to state 55
+    factor         go to state 56
+    function_call  go to state 57

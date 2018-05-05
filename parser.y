@@ -20,6 +20,10 @@ extern char last_id[50];
 int type[2];
 int type_indicator = 0;
 
+/* memory location */
+int next_mem_loc = 0;
+int bak_mem_loc;
+
 /* symbol table */
 typedef struct symbol {
 	
@@ -28,6 +32,7 @@ typedef struct symbol {
 	int  ret_type;
 	bool isGlobal;
 	int  lineno;
+	int  mem_loc;
 
 	// function only
 	bool declared;	
@@ -55,6 +60,7 @@ bool found = false;
 bool funcAsVar = false;
 bool varAsFunc = false;
 bool syntax_error = false;
+bool isDecl = true;
 
 /* AST */
 struct ast {
@@ -275,6 +281,8 @@ function_def	:	kind ID LPAR kind ID RPAR
 							temp->val_type = t_val;
 							temp->isGlobal = false;
 							temp->lineno = yylineno;
+							// set memory location
+							temp->mem_loc = next_mem_loc++;
 						
 							temp->declared = false;
 							temp->implemented = false;
@@ -285,6 +293,21 @@ function_def	:	kind ID LPAR kind ID RPAR
 							printf("Local %s variable %s declared in line %d\n", 
 												data_type[t_val], $5, yylineno);
 						}
+					}
+					body
+					{
+						global = true; // local scope ended
+						
+						/* free up memory for local table */
+						while(ltable != NULL) {
+							temp = ltable;
+							ltable = ltable->next;
+							free(temp);
+						}
+					}
+				|	kind ID LPAR error RPAR 
+					{
+						global = false;
 					}
 					body
 					{
@@ -381,9 +404,15 @@ decl	:	kind var_list SEMICOLON
 						printf("%s variable %s declared in line %d.\n", 
 								data_type[head->val_type], head->name, head->lineno);
 						
+						
+	
 						// add to corresponding table
 						if(global) { /* add to gtable */
 							temp = head;
+
+							// allocate memory location for this variable
+							temp->mem_loc = next_mem_loc++;
+
 							head = head->next;
 							if(gtable != NULL) {
 								temp->next = gtable->next;
@@ -396,6 +425,10 @@ decl	:	kind var_list SEMICOLON
 						}
 						else { /* add to ltable */
 							temp = head;
+
+							// allocate memory location for this variable
+							temp->mem_loc = next_mem_loc++;
+
 							head = head->next;
 							if(ltable != NULL) {
 								temp->next = ltable->next;
@@ -416,10 +449,13 @@ decl	:	kind var_list SEMICOLON
 				} /* while(head != NULL) */
 
 				temp = head = tail = NULL;
+				isDecl = false;
 
 			} /* end action for decl */
 		|	kind error SEMICOLON 
 			{
+				isDecl = false;
+
 				while(head != NULL) {
 					temp = head;
 					head = head->next;
@@ -451,22 +487,31 @@ open_stmt	:	KW_IF LPAR bool_expr RPAR stmt
 			|	KW_IF LPAR bool_expr RPAR matched_stmt KW_ELSE open_stmt
 			;
 
-matched_stmt	:	expr SEMICOLON 
+matched_stmt	:	expr SEMICOLON
+				|	error SEMICOLON	 
 				|	KW_WHILE LPAR bool_expr RPAR stmt 
+				|	KW_WHILE LPAR error 
 				|	KW_WHILE LPAR bool_expr RPAR body
-				|	KW_READ var_list SEMICOLON
+				|	KW_READ {isDecl = false;} var_list SEMICOLON
 					{
 						while(head != NULL) { /* loop for var_list */
 							
 							funcAsVar = false;
 							found = false;
 
+							/* ====================================================================================== */
+							
 							if(ltable != NULL) {
 								temp = ltable;
 								while(temp != NULL) { /* loop for local symbol table */
 									if(strcmp(head->name, temp->name) == 0) {
 										printf("Local %s variable %s declared in line %d used in line %d.\n", 
 														data_type[temp->val_type], temp->name, temp->lineno, yylineno);
+										
+										// generate target code
+										(temp->val_type == TYPE_INT) ? 
+											printf("READ %d\n", temp->mem_loc) : printf("READF %d\n", temp->mem_loc);
+										
 										found = true;
 										break;
 									}
@@ -474,28 +519,42 @@ matched_stmt	:	expr SEMICOLON
 								}
 							}
 							if(found == false && gtable != NULL) {
+								
 								temp = gtable;
 								while(temp != NULL) { /* loop for global symbol table */
-									if(strcmp(head->name, temp->name) == 0 && !(temp->declared) && !(temp->implemented)) {
-										printf("Global %s variable %s declared in line %d used in line %d.\n", 
-														data_type[temp->val_type], temp->name, temp->lineno, yylineno);
+									
+									if(strcmp(head->name, temp->name) == 0) {
+
+										if(!(temp->declared) && !(temp->implemented)) {
+											printf("Global %s variable %s declared in line %d used in line %d.\n", 
+															data_type[temp->val_type], temp->name, temp->lineno, yylineno);
+											
+											// generate target code
+											(temp->val_type == TYPE_INT) ? 
+											printf("READ %d\n", temp->mem_loc) : printf("READF %d\n", temp->mem_loc);
+										}
+										else {
+											funcAsVar = true;
+										}
+
 										found = true;
 										break;
 									}
-									if(strcmp(head->name, temp->name) == 0 && (head->declared || head->implemented)) {
-										funcAsVar = true;
-									}
 
 									temp = temp->next;
-								}
+
+								} /* loop for global symbol table */
 							}
-							if(!found) {
+
+							if(!found) { // ERROR detected
 								if(funcAsVar)
 									printf("ERROR line %d: function %s used as a variable.\n", yylineno, head->name);
 								else
 									printf("ERROR line %d: variable %s not declared.\n", yylineno, head->name);
 							}
 							
+							/* ====================================================================================== */
+
 							temp = head;
 							head = head->next;
 							free(temp);
@@ -508,6 +567,7 @@ matched_stmt	:	expr SEMICOLON
 				|	KW_WRITE error SEMICOLON
 				|	KW_RETURN expr SEMICOLON
 				|	KW_IF LPAR bool_expr RPAR matched_stmt KW_ELSE matched_stmt
+				|	KW_IF LPAR error RPAR matched_stmt KW_ELSE matched_stmt
 				;
 
 write_expr_list	:	wlist_unit wlist_rep
@@ -528,13 +588,15 @@ var_list	:	ID
 
 						strcpy(head->name, $1);
 
-						head->val_type = type[type_indicator];
-						head->isGlobal = global;
-						head->lineno = yylineno;
+						if(isDecl) {
+							head->val_type = type[type_indicator];
+							head->isGlobal = global;
+							head->lineno = yylineno;
 
-						head->declared = false;
-						head->implemented = false;
-						head->next = NULL;
+							head->declared = false;
+							head->implemented = false;
+							head->next = NULL;
+						}
 
 						tail = head;		
 					}
@@ -542,7 +604,7 @@ var_list	:	ID
 						printf("ERROR line %d: head is not NULL.\n", yylineno);
 					}
 				} 
-				var_list_rep
+				var_list_rep {printf("isDecl: %d\n", isDecl); isDecl = true;}
 			;
 
 var_list_rep	:	
@@ -553,14 +615,15 @@ var_list_rep	:
 							tail = tail->next;
 
 							strcpy(tail->name, $3);
+							if(isDecl) {
+								tail->val_type = type[type_indicator];
+								tail->isGlobal = global;
+								tail->lineno = yylineno;
 
-							tail->val_type = type[type_indicator];
-							tail->isGlobal = global;
-							tail->lineno = yylineno;
-
-							head->declared = false;
-							head->implemented = false;
-							tail->next = NULL;
+								tail->declared = false;
+								tail->implemented = false;
+								tail->next = NULL;
+							}
 						}
 						else {
 							printf("ERROR line %d: tail is NULL.\n", yylineno);
@@ -569,6 +632,7 @@ var_list_rep	:
 				;
 
 bool_expr	:	expr bool_op expr 
+			|	expr error expr {printf("ERROR: boolean operator is expected. Line: %d\n", yylineno-1);} 
 			;
 
 bool_op		:	OP_EQ
@@ -578,7 +642,7 @@ bool_op		:	OP_EQ
 			|	OP_GE
 			;
 
-expr		:	ID OP_ASSIGN expr
+expr		:	ID
 				{
 					funcAsVar = false;
 					found = false;
@@ -589,19 +653,6 @@ expr		:	ID OP_ASSIGN expr
 							if(strcmp(temp->name, $1) == 0) {
 								printf("Local %s variable %s declared in line %d used in line %d.\n", 
 										data_type[temp->val_type], temp->name, temp->lineno, yylineno);
-
-								// AST =======================================================================
-
-								if($3->datatype != temp->val_type) {
-								
-									printf("ERROR: Value of wrong type assigned to %s variable %s. Line: %d.\n",
-																		data_type[temp->val_type], temp->name, yylineno);
-									$$ = NULL;
-								}
-								else {
-									$$ = $3;
-								}
-								// ===========================================================================
 
 								found = true;
 								break;
@@ -616,25 +667,11 @@ expr		:	ID OP_ASSIGN expr
 								printf("Global %s variable %s declared in line %d used in line %d.\n", 
 									temp->val_type, temp->name, temp->lineno, yylineno);
 
-								// AST =======================================================================
-
-								if($3->datatype != temp->val_type) {
-									
-									printf("ERROR: Value of wrong type assigned to %s variable %s. Line: %d.\n",
-																		temp->val_type, temp->name, yylineno);
-									$$ = NULL;
-								}
-								else {
-									$$ = $3;
-								}
-								// ===========================================================================
-
 								found = true;
 								break;
 							}
 							if(strcmp(temp->name, $1) == 0 && (temp->declared || temp->implemented)) {
 								funcAsVar = true;
-								$$ = NULL;
 							}
 							temp = temp->next;
 						}
@@ -644,11 +681,64 @@ expr		:	ID OP_ASSIGN expr
 							printf("ERROR line %d: function %s used as a variable.\n", yylineno, $1);
 						else {
 							printf("ERROR line %d: variable %s not declared.\n", yylineno, $1);
-							// AST
-							$$ = NULL;
 						}
 					}
-				} 
+				}
+				OP_ASSIGN expr
+				{
+					funcAsVar = false;
+					found = false;
+
+					if(ltable != NULL) {
+						temp = ltable;
+						while(temp != NULL) { /* local symbol table */
+							if(strcmp(temp->name, $1) == 0) {
+
+								// AST =======================================================================
+
+								if($4->datatype != temp->val_type) {
+								
+									printf("ERROR: Value of wrong type assigned to %s variable %s. Line: %d.\n",
+																		data_type[temp->val_type], temp->name, yylineno);
+									$$ = NULL;
+								}
+								else {
+									$$ = $4;
+								}
+								// ===========================================================================
+
+								found = true;
+								break;
+							}
+							temp = temp->next;
+						}
+					}
+					if(found == false && gtable != NULL) {
+						temp = gtable;
+						while(temp != NULL) { /* global symbol table */
+							if(strcmp(temp->name, $1) == 0 && !(temp->declared) && !(temp->implemented)) {
+
+								// AST =======================================================================
+
+								if($4->datatype != temp->val_type) {
+									printf("ERROR: Value of wrong type assigned to %s variable %s. Line: %d.\n",
+																		data_type[temp->val_type], temp->name, yylineno);
+									$$ = NULL;
+								}
+								else { $$ = $4; }
+								// ===========================================================================
+
+								found = true;
+								break;
+							}
+							if(strcmp(temp->name, $1) == 0 && (temp->declared || temp->implemented)) {
+								$$ = NULL;
+							}
+							temp = temp->next;
+						}
+					}
+					if(!found) { $$ = NULL; }
+				}
 			|	expr1
 			;
 
@@ -770,7 +860,7 @@ factor		:	INT_LIT { $$ = newnum($1, TYPE_INT); }
 					if(ltable != NULL) {
 						temp = ltable;
 						while(temp != NULL) {
-							if(strcmp(temp->name, $1) == 0) {
+							if(strcmp(temp->name, $1) == 0) { // found it in local symbol table
 								printf("Local %s variable %s declared in line %d used in line %d.\n", 
 												data_type[temp->val_type], temp->name, temp->lineno, yylineno);
 								
