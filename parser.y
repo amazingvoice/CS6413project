@@ -66,6 +66,7 @@ bool isDecl = true;
 struct ast {
 	int nodetype;
 	int datatype;
+	int mem_loc;
 	struct ast *l;
 	struct ast *r;
 };
@@ -79,7 +80,7 @@ struct numval {
 struct idval {
 	int nodetype;
 	int datatype;
-	double val;
+	int mem_loc;
 	char name[50];
 	int decl_lineno;
 	int lineno;
@@ -87,7 +88,7 @@ struct idval {
 
 struct ast * newast(int, struct ast *, struct ast *);
 struct ast * newnum(double, int);
-struct ast * newid(double, int, char *, int, int);
+struct ast * newid(int, int, char *, int, int);
 
 %}
 
@@ -449,12 +450,10 @@ decl	:	kind var_list SEMICOLON
 				} /* while(head != NULL) */
 
 				temp = head = tail = NULL;
-				isDecl = false;
 
 			} /* end action for decl */
 		|	kind error SEMICOLON 
 			{
-				isDecl = false;
 
 				while(head != NULL) {
 					temp = head;
@@ -491,7 +490,6 @@ matched_stmt	:	expr SEMICOLON
 				|	error SEMICOLON	 
 				|	KW_WHILE LPAR bool_expr RPAR stmt 
 				|	KW_WHILE LPAR error 
-				|	KW_WHILE LPAR bool_expr RPAR body
 				|	KW_READ {isDecl = false;} var_list SEMICOLON
 					{
 						while(head != NULL) { /* loop for var_list */
@@ -604,7 +602,7 @@ var_list	:	ID
 						printf("ERROR line %d: head is not NULL.\n", yylineno);
 					}
 				} 
-				var_list_rep {printf("isDecl: %d\n", isDecl); isDecl = true;}
+				var_list_rep {isDecl = true;}
 			;
 
 var_list_rep	:	
@@ -766,6 +764,20 @@ expr1		:	expr1 OP_PLUS expr1
 							printf("%s value. Line: %d\n", data_type[$3->datatype], yylineno);
 						}
 					}
+					else { // TARGET CODE GENERATION
+
+						if($$->datatype == TYPE_INT) {
+							printf("ADD ");
+							$1->nodetype == 'N' ? printf("#%d ", (int)((struct numval *)$1)->val) : printf("%d ", $1->mem_loc);
+							$3->nodetype == 'N' ? printf("#%d ", (int)((struct numval *)$3)->val) : printf("%d ", $3->mem_loc);
+						}
+						else {
+							printf("ADDF ");
+							$1->nodetype == 'N' ? printf("#%d ", ((struct numval *)$1)->val) : printf("%d ", $1->mem_loc);
+							$3->nodetype == 'N' ? printf("#%d ", ((struct numval *)$3)->val) : printf("%d ", $3->mem_loc);
+						}
+						printf("%d\n", $$->mem_loc);
+					}
 				}
 			|	expr1 OP_MINUS expr1 
 				{
@@ -791,6 +803,20 @@ expr1		:	expr1 OP_PLUS expr1
 							printf("subtract %s value. Line: %d\n", data_type[$3->datatype], yylineno);
 						}
 
+					}
+					else { // TARGET CODE GENERATION
+
+						if($$->datatype == TYPE_INT) {
+							printf("SUB ");
+							$1->nodetype == 'N' ? printf("#%d ", (int)((struct numval *)$1)->val) : printf("%d ", $1->mem_loc);
+							$3->nodetype == 'N' ? printf("#%d ", (int)((struct numval *)$3)->val) : printf("%d ", $3->mem_loc);
+						}
+						else {
+							printf("SUBF ");
+							$1->nodetype == 'N' ? printf("#%d ", ((struct numval *)$1)->val) : printf("%d ", $1->mem_loc);
+							$3->nodetype == 'N' ? printf("#%d ", ((struct numval *)$3)->val) : printf("%d ", $3->mem_loc);
+						}
+						printf("%d\n", $$->mem_loc);
 					}
 				}
 			|	expr1 OP_MULT expr1 
@@ -818,6 +844,20 @@ expr1		:	expr1 OP_PLUS expr1
 						}
 
 					}
+					else { // TARGET CODE GENERATION
+
+						if($$->datatype == TYPE_INT) {
+							printf("MUL ");
+							$1->nodetype == 'N' ? printf("#%d ", (int)((struct numval *)$1)->val) : printf("%d ", $1->mem_loc);
+							$3->nodetype == 'N' ? printf("#%d ", (int)((struct numval *)$3)->val) : printf("%d ", $3->mem_loc);
+						}
+						else {
+							printf("MULF ");
+							$1->nodetype == 'N' ? printf("#%d ", ((struct numval *)$1)->val) : printf("%d ", $1->mem_loc);
+							$3->nodetype == 'N' ? printf("#%d ", ((struct numval *)$3)->val) : printf("%d ", $3->mem_loc);
+						}
+						printf("%d\n", $$->mem_loc);
+					}
 				}
 			|	expr1 OP_DIV expr1 
 				{
@@ -843,8 +883,34 @@ expr1		:	expr1 OP_PLUS expr1
 							printf("%s value. Line: %d\n", data_type[$3->datatype], yylineno);
 						}
 					}
+					else { // TARGET CODE GENERATION 
+						
+						if($$->datatype == TYPE_INT) {
+							printf("DIV ");
+							$1->nodetype == 'N' ? printf("#%d ", (int)((struct numval *)$1)->val) : printf("%d ", $1->mem_loc);
+							$3->nodetype == 'N' ? printf("#%d ", (int)((struct numval *)$3)->val) : printf("%d ", $3->mem_loc);
+						}
+						else {
+							printf("DIVF ");
+							$1->nodetype == 'N' ? printf("#%d ", ((struct numval *)$1)->val) : printf("%d ", $1->mem_loc);
+							$3->nodetype == 'N' ? printf("#%d ", ((struct numval *)$3)->val) : printf("%d ", $3->mem_loc);
+						}
+						printf("%d\n", $$->mem_loc);
+					}
 				}
-			|	OP_MINUS factor %prec UMINUS { $$ = newast('M', $2, NULL); }
+			|	OP_MINUS factor %prec UMINUS 
+				{ 
+					$$ = newast('M', $2, NULL); 
+					if($$->datatype == TYPE_INT) {
+						printf("NEG ");
+						$2->nodetype == 'N' ? printf("#%d ", (int)((struct numval *)$2)->val) : printf("%d ", $2->mem_loc);
+					}
+					else {
+						printf("NEGF ");
+						$2->nodetype == 'N' ? printf("#%d ", ((struct numval *)$2)->val) : printf("%d ", $2->mem_loc);
+					}
+					printf("%d\n", $$->mem_loc);
+				}
 			|	factor
 			;
 
@@ -858,14 +924,15 @@ factor		:	INT_LIT { $$ = newnum($1, TYPE_INT); }
 					funcAsVar = false;
 
 					if(ltable != NULL) {
+
 						temp = ltable;
 						while(temp != NULL) {
 							if(strcmp(temp->name, $1) == 0) { // found it in local symbol table
 								printf("Local %s variable %s declared in line %d used in line %d.\n", 
-												data_type[temp->val_type], temp->name, temp->lineno, yylineno);
+												data_type[temp->val_type], $1, temp->lineno, yylineno);
 								
-								// AST TODO: temporary ID value
-								$$ = newid(0.0, temp->val_type, temp->name, temp->lineno, yylineno);
+								// AST ==============================
+								$$ = newid(temp->mem_loc, temp->val_type, $1, temp->lineno, yylineno);
 
 								found = true;
 								break;
@@ -874,23 +941,26 @@ factor		:	INT_LIT { $$ = newnum($1, TYPE_INT); }
 						}
 					}
 					if(found == false && gtable != NULL) {
+						
 						temp = gtable;
 						while(temp != NULL) {
-							if(strcmp(temp->name, $1) == 0 && !(temp->declared) && !(temp->implemented)) {
-								printf("Global %s variable %s declared in line %d used in line %d.\n", 
-												data_type[temp->val_type], temp->name, temp->lineno, yylineno);
-								
-								// AST TODO: temporary ID value
-								$$ = newid(0.0, temp->val_type, temp->name, temp->lineno, yylineno);
 
+							if(strcmp(temp->name, $1) == 0) { 
+								if(!(temp->declared) && !(temp->implemented)) {
+									printf("Global %s variable %s declared in line %d used in line %d.\n", 
+													data_type[temp->val_type], $1, temp->lineno, yylineno);
+									// AST ==============================
+									$$ = newid(temp->mem_loc, temp->val_type, $1, temp->lineno, yylineno);
+								}
+								else {
+									funcAsVar = true;
+									// AST ==============================
+									$$ = newid(-1, TYPE_INVALID, $1, -1, yylineno);
+								}
 								found = true;
 								break;
 							}
-							if(strcmp(temp->name, $1) == 0 && (temp->declared || temp->implemented)) {
-								funcAsVar = true;
-								// AST
-								$$ = newid(0.0, TYPE_INVALID, $1, 0, yylineno);
-							}
+
 							temp = temp->next;
 						}
 					}
@@ -963,7 +1033,7 @@ function_call	:	ID LPAR expr RPAR
 									}
 									else {
 										varAsFunc = true;
-										//AST
+										//AST =======================================================
 										$$ = newnum(0.0, TYPE_INVALID);
 									}
 								}
@@ -1004,14 +1074,20 @@ yyerror(char *s)
 }
 
 struct ast * newast(int nodetype, struct ast *l, struct ast *r) {
+	
 	struct ast *a = (struct ast *)malloc(sizeof(struct ast));
 	a->nodetype = nodetype;
-	if(nodetype == 'M')
+	
+	if(nodetype == 'M') // UMINUS
 		a->datatype = l->datatype;
 	else
 		a->datatype = ( (l->datatype == r->datatype) ? l->datatype : TYPE_INVALID );
+	
+	a->mem_loc = next_mem_loc++;
+		
 	a->l = l;
 	a->r = r;
+
 	return a;
 }
 
@@ -1023,11 +1099,11 @@ struct ast * newnum(double d, int datatype) {
 	return (struct ast *)a;
 }
 
-struct ast * newid(double d, int datatype, char *name, int dln, int ln) {
+struct ast * newid(int mem, int datatype, char *name, int dln, int ln) {
 	struct idval *a = (struct idval *)malloc(sizeof(struct idval));
 	a->nodetype = 'I';
 	a->datatype = datatype;
-	a->val = d;
+	a->mem_loc = mem;
 	strcpy(a->name, name);
 	a->decl_lineno = dln;
 	a->lineno = ln;
