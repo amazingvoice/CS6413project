@@ -10,10 +10,9 @@
 #define TYPE_INT 1
 #define TYPE_FLOAT 2
 
-
 FILE *fd; // target code file descriptor
 
-
+// data type format converter (for print use)
 char *data_type[3] = {"INVALID", "int", "float"};
 
 /* interface to the lexer */
@@ -50,17 +49,22 @@ typedef struct symbol {
 	bool called;
 	int  decl_lineno;	
 	int  def_lineno;
+
 	int  label;
+	int  ret_mem_loc;
+	double  ret_val;  // if ret_mem_loc == -1, this function returns a constant instead of a memloc
 
 	struct symbol *next;
 } sym;
 
+// temporary variables
 sym *ltable = NULL;
 sym *gtable = NULL;
 
 sym *head = NULL; // head of var_list
 sym *tail = NULL; // tail of var_list
 sym *temp = NULL;
+sym *current_func = NULL;
 
 int t_val;
 int t_ret;
@@ -75,12 +79,11 @@ bool isDecl = true;
 bool isWhile = false;
 bool IFblock = false;
 
-char jump_cmd[100];
-
-// Stack
+// Stack (for embedded while and if stmt)
 int whileStack[100];
 int ifStack[100];
 int elseStack[100];
+
 // stack pointer
 int sp_while = 0;
 int sp_if = 0;
@@ -110,9 +113,20 @@ struct idval {
 	int lineno;
 };
 
+struct fcall {
+	int nodetype;
+	int datatype;
+	int mem_loc;
+	int name[50];
+	int decl_lineno;
+	int def_lineno;
+	int lineno;
+};
+
 struct ast * newast(int, struct ast *, struct ast *);
 struct ast * newnum(double, int);
 struct ast * newid(int, int, char *, int, int);
+struct ast * newfcall(sym *, int);
 
 %}
 
@@ -214,7 +228,9 @@ function_decl:	kind ID LPAR kind RPAR SEMICOLON
 						temp->implemented = false;
 						temp->called = false;
 						temp->decl_lineno = yylineno;
-						temp->label = next_label++;
+
+						temp->label = next_label++;			 // allocate label number
+						temp->ret_mem_loc = next_mem_loc++;  // allocate memory location for return value
 								
 						/* add to the head of the gtable list */
 						/* CAUTION**: test if gtable is empty */
@@ -250,7 +266,7 @@ function_def	:	kind ID LPAR kind ID RPAR
 						// check if function definition mismatched with declaration
 						while(temp != NULL) {	// search for function decl in global table
 
-							if((strcmp(temp->name, $2) == 0) && (temp->declared)) {
+							if((strcmp(temp->name, $2) == 0) && (temp->declared)) { // found declaration
 								
 								found = true; // function decl found
 
@@ -281,7 +297,9 @@ function_def	:	kind ID LPAR kind ID RPAR
 							temp->implemented = true;
 							temp->called = false;
 							temp->def_lineno = yylineno;
+
 							temp->label = next_label++;
+							temp->ret_mem_loc = next_mem_loc++;
 
 							// set start label to the label of main function
 							if(strcmp($2, "main") == 0) 
@@ -304,6 +322,8 @@ function_def	:	kind ID LPAR kind ID RPAR
 							printf("function %s defined in line %d\n", $2, yylineno);
 							temp->implemented = true;
 							temp->def_lineno = yylineno;
+							
+							current_func = temp; // record the current function							
 
 							global = false;	// entered local scope
 
@@ -334,9 +354,6 @@ function_def	:	kind ID LPAR kind ID RPAR
 					}
 					body
 					{
-
-						// TARGET CODE GENERATION
-						fprintf(fd, "RETURN\n");
 
 						global = true; // local scope ended
 						
@@ -611,7 +628,26 @@ stmt			:	LBRACE stmts RBRACE
 				|	KW_READ error SEMICOLON
 				|	KW_WRITE write_expr_list SEMICOLON
 				|	KW_WRITE error SEMICOLON
-				|	KW_RETURN expr SEMICOLON
+				|	KW_RETURN expr SEMICOLON 
+					{
+						if($2->nodetype == 'N') {
+							if($2->datatype == TYPE_INT) {
+								fprintf(fd, "COPY #%d %d\n", (int)(((struct numval *)$2)->val), current_func->ret_mem_loc);
+							}
+							else {
+								fprintf(fd, "COPYF #%lf %d\n", ((struct numval *)$2)->val, current_func->ret_mem_loc);
+							}
+						}
+						else {
+							if($2->datatype == TYPE_INT) {
+								fprintf(fd, "COPY %d %d\n", $2->mem_loc, current_func->ret_mem_loc);
+							}
+							else {
+								fprintf(fd, "COPYF %lf %d\n", $2->mem_loc, current_func->ret_mem_loc);
+							}
+						}
+						fprintf(fd, "RETURN\n");
+					}
 				|	KW_IF LPAR bool_expr RPAR stmt 
 					{
 						// TARGET CODE GENERATION
@@ -784,7 +820,7 @@ bool_expr	:	expr OP_EQ expr
 							if(isWHILE) {
 								// push
 								whileStack[sp_while++] = next_label;
-								fprintf(fd, "JEQF %s %s %d\n", operand1, operand2, next_label++);
+								fprintf(fd, "JNEF %s %s %d\n", operand1, operand2, next_label++);
 								isWHILE = false;
 							}
 							else if(isIF) {
@@ -841,7 +877,7 @@ bool_expr	:	expr OP_EQ expr
 							if(isWHILE) {
 								// push
 								whileStack[sp_while++] = next_label;
-								fprintf(fd, "JLT %s %s %d\n", operand1, operand2, next_label++);
+								fprintf(fd, "JGE %s %s %d\n", operand1, operand2, next_label++);
 								isWHILE = false;	
 							}
 							else if(isIF) {
@@ -866,7 +902,7 @@ bool_expr	:	expr OP_EQ expr
 							if(isWHILE) {
 								// push
 								whileStack[sp_while++] = next_label;
-								fprintf(fd, "JLTF %s %s %d\n", operand1, operand2, next_label++);
+								fprintf(fd, "JGEF %s %s %d\n", operand1, operand2, next_label++);
 								isWHILE = false;
 							}
 							else if(isIF) {
@@ -924,7 +960,7 @@ bool_expr	:	expr OP_EQ expr
 							if(isWHILE) {
 								// push
 								whileStack[sp_while++] = next_label;
-								fprintf(fd, "JLE %s %s %d\n", operand1, operand2, next_label++);
+								fprintf(fd, "JGT %s %s %d\n", operand1, operand2, next_label++);
 								isWHILE = false;
 							}
 							else if(isIF) {
@@ -949,7 +985,7 @@ bool_expr	:	expr OP_EQ expr
 							if(isWHILE) {
 								// push
 								whileStack[sp_while++] = next_label;
-								fprintf(fd, "JLEF %s %s %d\n", operand1, operand2, next_label++);
+								fprintf(fd, "JGTF %s %s %d\n", operand1, operand2, next_label++);
 								isWHILE = false;
 							}
 							else if(isIF) {
@@ -1007,7 +1043,7 @@ bool_expr	:	expr OP_EQ expr
 							if(isWHILE) {
 								// push
 								whileStack[sp_while++] = next_label;
-								fprintf(fd, "JGT %s %s %d\n", operand1, operand2, next_label++);
+								fprintf(fd, "JLE %s %s %d\n", operand1, operand2, next_label++);
 								isWHILE = false;
 							}
 							else if(isIF) {
@@ -1032,7 +1068,7 @@ bool_expr	:	expr OP_EQ expr
 							if(isWHILE) {
 								// push
 								whileStack[sp_while++] = next_label;
-								fprintf(fd, "JGTF %s %s %d\n", operand1, operand2, next_label++);
+								fprintf(fd, "JLEF %s %s %d\n", operand1, operand2, next_label++);
 								isWHILE = false;
 							}
 							else if(isIF) {
@@ -1090,7 +1126,7 @@ bool_expr	:	expr OP_EQ expr
 							if(isWHILE) {
 								// push
 								whileStack[sp_while++] = next_label;
-								fprintf(fd, "JGE %s %s %d\n", operand1, operand2, next_label++);
+								fprintf(fd, "JLT %s %s %d\n", operand1, operand2, next_label++);
 								isWHILE = false;
 							}
 							else if(isIF) {
@@ -1115,7 +1151,7 @@ bool_expr	:	expr OP_EQ expr
 							if(isWHILE) {
 								// push
 								whileStack[sp_while++] = next_label;
-								fprintf(fd, "JGEF %s %s %d\n", operand1, operand2, next_label++);
+								fprintf(fd, "JLTF %s %s %d\n", operand1, operand2, next_label++);
 								isWHILE = false;
 							}
 							else if(isIF) {
@@ -1156,7 +1192,7 @@ expr		:	ID
 						while(temp != NULL) { /* global symbol table */
 							if(strcmp(temp->name, $1) == 0 && !(temp->declared) && !(temp->implemented)) {
 								printf("Global %s variable %s declared in line %d used in line %d.\n", 
-									temp->val_type, temp->name, temp->lineno, yylineno);
+									data_type[temp->val_type], temp->name, temp->lineno, yylineno);
 
 								found = true;
 								break;
@@ -1219,6 +1255,7 @@ expr		:	ID
 							temp = temp->next;
 						}
 					}
+
 					if(found == false && gtable != NULL) {
 						temp = gtable;
 						while(temp != NULL) { /* global symbol table */
@@ -1442,12 +1479,12 @@ expr1		:	expr1 OP_PLUS expr1
 					}
 					fprintf(fd, "%d\n", $$->mem_loc);
 				}
-			|	factor
+			|	factor { $$ = $1; }
 			;
 
 factor		:	INT_LIT { $$ = newnum($1, TYPE_INT); } 
 			| 	FLOAT_LIT { $$ = newnum($1, TYPE_FLOAT); }
-			| 	function_call 
+			| 	function_call { $$ = $1; }
 			| 	LPAR expr RPAR { $$ = $2; }
 			|	ID
 				{
@@ -1519,8 +1556,8 @@ function_call	:	ID LPAR expr RPAR
 									printf("ERROR line %d: variable %s used as function.\n", 
 																		yylineno, temp->name);
 
-									// AST
-									$$ = newnum(0.0, TYPE_INVALID);
+									// AST =============================================================
+									$$ = newfcall(NULL, yylineno);
 
 									found = true;
 									break;
@@ -1542,7 +1579,7 @@ function_call	:	ID LPAR expr RPAR
 										fprintf(fd, "CALL %d\n", temp->label);
 
 										// AST ==================================================================
-										$$ = newnum(0.0, temp->ret_type);
+										$$ = newfcall(temp, yylineno);
 
 										if($3->datatype != temp->val_type) {
 											printf("ERROR: Function %s called with wrong parameter type. Line: %d.\n",
@@ -1561,7 +1598,7 @@ function_call	:	ID LPAR expr RPAR
 										fprintf(fd, "CALL %d\n", temp->label);
 
 										// AST ==================================================================
-										$$ = newnum(0.0, temp->ret_type);
+										$$ = newfcall(temp, yylineno);
 										
 										if($3->datatype != temp->val_type) {
 											printf("ERROR: Function %s called with wrong parameter type. Line: %d.\n",
@@ -1574,7 +1611,7 @@ function_call	:	ID LPAR expr RPAR
 									else {
 										varAsFunc = true;
 										//AST =======================================================
-										$$ = newnum(0.0, TYPE_INVALID);
+										$$ = newfcall(NULL, yylineno);
 									}
 								}
 								temp = temp->next;
@@ -1652,6 +1689,7 @@ struct ast * newnum(double d, int datatype) {
 	a->nodetype = 'N';
 	a->datatype = datatype;
 	a->val = d;
+	
 	return (struct ast *)a;
 }
 
@@ -1663,6 +1701,25 @@ struct ast * newid(int mem, int datatype, char *name, int dln, int ln) {
 	strcpy(a->name, name);
 	a->decl_lineno = dln;
 	a->lineno = ln;
+
 	return (struct ast *)a;
 }
 
+struct ast * newfcall(sym *s, int ln) {
+	struct fcall *a = (struct fcall *)malloc(sizeof(struct fcall));
+	a->nodetype = 'F';
+	
+	if(s != NULL) {
+		a->datatype = s->ret_type;
+		a->mem_loc = s->ret_mem_loc;
+		strcpy(a->name, s->name);
+		a->decl_lineno = s->decl_lineno;
+		a->def_lineno = s->def_lineno;
+		a->lineno = ln;
+	}
+	else {
+		a->datatype = TYPE_INVALID;
+	}
+
+	return (struct ast *)a;
+}

@@ -1,35 +1,47 @@
-label 1
-ADD 1 2 7
-SUB 7 3 8
-MULF 4 5 9
-DIVF 9 6 10
-SUB 1 2 11
-JLE 11 #4 2
-READ 1
-JUMP 3
-label 2
-MULF 4 5 12
-JLT 12 6 4
-DIV 2 3 13
-COPY 13 1
-JUMP 5
-label 4
-MUL 2 3 14
-COPY 14 1
-label 5
-label 6
-JLE 6 #0 7
-WRITES "this is in the while loop"
-READF 6
-JUMP 6
-label 7
-SUB 1 2 15
-ADD 15 3 16
-CALL 0
-label 3
-RETURN
 label 0
-WRITES "entered func"
-MUL 17 #2 18
+JLE 0 2 1
+COPY 2 3
+COPY 0 2
+COPY 3 0
+label 1
+label 2
+JLE 0 #0 3
+DIV 2 0 4
+MUL 0 4 5
+SUB 2 5 6
+COPY 6 3
+COPY 0 2
+COPY 3 0
+JUMP 2
+label 3
+COPY 2 1
 RETURN
-START 1
+label 4
+WRITES "I am going to try and compute GCD using Euclid's algorithm. Gimme two integers"
+READ 9
+READ 10
+JLT #0 9 5
+WRITES "I wanted a positive number and you gave me "
+WRITE 9
+WRITES "!!!!"
+COPY #17 7
+RETURN
+label 5
+JLT #0 10 6
+WRITES "I wanted a positive number and you gave me "
+WRITE 10
+WRITES "!!!!"
+COPY #17 7
+RETURN
+label 6
+WRITES "Will attempt to compute GCD("
+WRITE 9
+WRITES ","
+WRITES "j"
+WRITES ")"
+COPY 10 0
+CALL 0
+WRITE 1
+COPY #0 7
+RETURN
+START 4
