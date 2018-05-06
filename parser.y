@@ -4,10 +4,15 @@
 #include <stdlib.h>
 #include <string.h>
 #include <stdbool.h>
+#include <fcntl.h>
 
 #define TYPE_INVALID 0
 #define TYPE_INT 1
 #define TYPE_FLOAT 2
+
+
+FILE *fd; // target code file
+
 
 char *data_type[3] = {"INVALID", "int", "float"};
 
@@ -514,7 +519,7 @@ stmt			:	LBRACE stmts RBRACE
 										
 										// generate target code
 										(temp->val_type == TYPE_INT) ? 
-											printf("READ %d\n", temp->mem_loc) : printf("READF %d\n", temp->mem_loc);
+											fprintf(fd, "READ %d\n", temp->mem_loc) : fprintf(fd, "READF %d\n", temp->mem_loc);
 										
 										found = true;
 										break;
@@ -613,9 +618,9 @@ var_list	:	ID
 
 							head->declared = false;
 							head->implemented = false;
-							head->next = NULL;
 						}
 
+						head->next = NULL;
 						tail = head;		
 					}
 					else {
@@ -633,6 +638,7 @@ var_list_rep	:
 							tail = tail->next;
 
 							strcpy(tail->name, $3);
+
 							if(isDecl) {
 								tail->val_type = type[type_indicator];
 								tail->isGlobal = global;
@@ -640,8 +646,8 @@ var_list_rep	:
 
 								tail->declared = false;
 								tail->implemented = false;
-								tail->next = NULL;
 							}
+								tail->next = NULL;
 						}
 						else {
 							printf("ERROR line %d: tail is NULL.\n", yylineno);
@@ -1450,6 +1456,11 @@ function_call	:	ID LPAR expr RPAR
 
 main(int argc, char **argv)
 {
+	if((fd = fopen("out.asm", "w+")) < 0) {
+		printf("ERROR: failed to open file\n");
+		exit(EXIT_FAILURE);
+	}
+
 	yyparse();
 	while(gtable != NULL && !syntax_error) {
 		if(gtable->called && !(gtable->implemented)) {
@@ -1459,6 +1470,9 @@ main(int argc, char **argv)
 		gtable = gtable->next;
 		free(temp);
 	}
+
+	fclose(fd);
+
 }
 
 yyerror(char *s)
