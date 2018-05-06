@@ -129,7 +129,7 @@ struct ast * newid(int, int, char *, int, int);
 
 /* precedence decls : the ones declared later have higher precdedence */
 
-%right RPAR KW_ELSE
+
 %right OP_ASSIGN
 %nonassoc OP_EQ OP_LT OP_LE OP_GT OP_GE
 %left OP_PLUS OP_MINUS
@@ -487,7 +487,15 @@ kind	:	KW_INT
 			}
 		;
 
-stmt			:	LBRACE stmts RBRACE 
+stmt	:	matched_stmt
+		|	open_stmt
+		;
+
+open_stmt	:	KW_IF LPAR bool_expr RPAR stmt {printf("label %d\n", next_label++); isIF = false;}
+			|	KW_IF LPAR bool_expr RPAR matched_stmt KW_ELSE open_stmt 
+			;
+
+matched_stmt	:	LBRACE stmts RBRACE 
 				|	expr SEMICOLON 
 				|	error SEMICOLON	 
 				|	KW_WHILE {printf("label %d\n", next_label++);} LPAR bool_expr RPAR stmt 
@@ -569,8 +577,8 @@ stmt			:	LBRACE stmts RBRACE
 				|	KW_WRITE write_expr_list SEMICOLON
 				|	KW_WRITE error SEMICOLON
 				|	KW_RETURN expr SEMICOLON
-				|	KW_IF LPAR bool_expr RPAR stmt
-				|	KW_IF LPAR bool_expr RPAR stmt KW_ELSE stmt 
+				|	KW_IF LPAR bool_expr RPAR matched_stmt KW_ELSE matched_stmt 
+				|	KW_IF LPAR error RPAR matched_stmt KW_ELSE matched_stmt
 				;
 
 

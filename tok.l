@@ -12,6 +12,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <stdio.h>
+#include <stdbool.h>
 #include "parser.tab.h"
 
 
@@ -19,9 +20,9 @@ int line_no = 1;
 char *skip;
 int mylength;
 
-char second_to_last_id[50];
-char last_id[50];
-
+bool isIF = false;
+bool isELSE = false;
+bool isWHILE = false;
 
 %}
 
@@ -40,9 +41,9 @@ char last_id[50];
  /* tokens */
 "int"			return(KW_INT);
 "float"			return(KW_FLOAT);
-"if"			return(KW_IF);
-"else"			return(KW_ELSE);
-"while"			return(KW_WHILE);
+"if"			{isIF = true; return(KW_IF);}
+"else"			{isELSE = true; return(KW_ELSE);}
+"while"			{isWHILE = true; return(KW_WHILE);}
 "return"		return(KW_RETURN);
 "read"			return(KW_READ);
 "write"			return(KW_WRITE);
@@ -65,8 +66,6 @@ char last_id[50];
 
 [a-zA-Z_][a-zA-Z_0-9]*  { 
 			   				yylval.s = strdup(yytext);
-			   				strcpy(second_to_last_id, last_id);
-			   				strcpy(last_id, yytext);
 			   				return(ID); 
                         }
 
