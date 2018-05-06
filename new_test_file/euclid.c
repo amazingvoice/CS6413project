@@ -18,7 +18,6 @@ int Euclid (int a) { /* both positive, just in case */
 
    return a;
 }
-
 int main (int dummy) {
    int i, j;
    write "I am going to try and compute GCD using Euclid's algorithm. Gimme two integers";
@@ -34,8 +33,10 @@ int main (int dummy) {
      return 17; /* there is no exit(...) or abort(...) */
    }
 
-   write "Will attempt to compute GCD(", i, ",", "j", ")";
+   write "Will attempt to compute GCD(", i, ",", j, ")";
    b = j; /* horrible hack to pass the second parameter through a global.  does it work? */
    write Euclid(i);
    return 0;
 }
+
+

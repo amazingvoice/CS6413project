@@ -341,7 +341,8 @@ function_def	:	kind ID LPAR kind ID RPAR
 							temp->lineno = yylineno;
 							// set memory location
 							temp->mem_loc = next_mem_loc++;
-						
+							current_func->mem_loc = temp->mem_loc;						
+
 							temp->declared = false;
 							temp->implemented = false;
 							temp->next = NULL;
@@ -626,7 +627,7 @@ stmt			:	LBRACE stmts RBRACE
 						head = tail = NULL;
 					}
 				|	KW_READ error SEMICOLON
-				|	KW_WRITE write_expr_list SEMICOLON
+				|	KW_WRITE write_expr_list SEMICOLON {fprintf(fd, "NEWLINE\n");}
 				|	KW_WRITE error SEMICOLON
 				|	KW_RETURN expr SEMICOLON 
 					{
@@ -1570,12 +1571,31 @@ function_call	:	ID LPAR expr RPAR
 							temp = gtable;
 							while(temp != NULL) {
 								if(strcmp(temp->name, $1) == 0) {
+
 									if(temp->implemented) {
 										temp->called = true;
 										printf("Function %s defined in line %d used in line %d.\n", 
 															temp->name, temp->def_lineno, yylineno);
 
 										// ========== TARGET CODE GENERATION ==============
+
+										if($3->datatype == TYPE_INT) {
+											if($3->nodetype == 'N') {
+												fprintf(fd, "COPY #%d %d\n", (int)(((struct numval *)$3)->val), temp->mem_loc);
+											}
+											else {
+												fprintf(fd, "COPY %d %d\n", $3->mem_loc, temp->mem_loc);
+											}
+										}
+										else {
+											if($3->nodetype == 'N') {
+												fprintf(fd, "COPYF #%lf %d\n", ((struct numval *)$3)->val, temp->mem_loc);
+											}
+											else {
+												fprintf(fd, "COPYF %d %d\n", $3->mem_loc, temp->mem_loc);
+											}
+										}
+
 										fprintf(fd, "CALL %d\n", temp->label);
 
 										// AST ==================================================================
@@ -1595,6 +1615,24 @@ function_call	:	ID LPAR expr RPAR
 															temp->name, temp->decl_lineno, yylineno);
 
 										// ========== TARGET CODE GENERATION ==============
+										
+										if($3->datatype == TYPE_INT) {
+											if($3->nodetype == 'N') {
+												fprintf(fd, "COPY #%d %d\n", (int)(((struct numval *)$3)->val), temp->mem_loc);
+											}
+											else {
+												fprintf(fd, "COPY %d %d\n", $3->mem_loc, temp->mem_loc);
+											}
+										}
+										else {
+											if($3->nodetype == 'N') {
+												fprintf(fd, "COPYF #%lf %d\n", ((struct numval *)$3)->val, temp->mem_loc);
+											}
+											else {
+												fprintf(fd, "COPYF %d %d\n", $3->mem_loc, temp->mem_loc);
+											}
+										}
+
 										fprintf(fd, "CALL %d\n", temp->label);
 
 										// AST ==================================================================
