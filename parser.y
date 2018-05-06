@@ -129,7 +129,8 @@ struct ast * newid(int, int, char *, int, int);
 
 /* precedence decls : the ones declared later have higher precdedence */
 
-%right RPAR KW_ELSE
+%right RPAR KW_ELSE /* resolve if-else shift/reduce conflict */
+
 %right OP_ASSIGN
 %nonassoc OP_EQ OP_LT OP_LE OP_GT OP_GE
 %left OP_PLUS OP_MINUS
@@ -569,8 +570,8 @@ stmt			:	LBRACE stmts RBRACE
 				|	KW_WRITE write_expr_list SEMICOLON
 				|	KW_WRITE error SEMICOLON
 				|	KW_RETURN expr SEMICOLON
-				|	KW_IF LPAR bool_expr RPAR stmt
-				|	KW_IF LPAR bool_expr RPAR stmt KW_ELSE stmt 
+				|	KW_IF LPAR bool_expr RPAR stmt {printf("label %d\n", next_label++);}
+				|	KW_IF LPAR bool_expr RPAR stmt KW_ELSE {printf("label %d\n", next_label++);} stmt 
 				;
 
 
