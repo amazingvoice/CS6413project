@@ -76,7 +76,7 @@
 #define TYPE_FLOAT 2
 
 
-FILE *fd; // target code file
+FILE *fd; // target code file descriptor
 
 
 char *data_type[3] = {"INVALID", "int", "float"};
@@ -96,6 +96,7 @@ int next_mem_loc = 0;
 int bak_mem_loc;
 
 /* label */
+int start_label = -1;
 int next_label = 0;
 
 /* symbol table */
@@ -114,6 +115,7 @@ typedef struct symbol {
 	bool called;
 	int  decl_lineno;	
 	int  def_lineno;
+	int  label;
 
 	struct symbol *next;
 } sym;
@@ -139,6 +141,15 @@ bool isWhile = false;
 bool IFblock = false;
 
 char jump_cmd[100];
+
+// Stack
+int whileStack[100];
+int ifStack[100];
+int elseStack[100];
+// stack pointer
+int sp_while = 0;
+int sp_if = 0;
+int sp_else = 0;
 
 /* AST */
 struct ast {
@@ -169,7 +180,7 @@ struct ast * newnum(double, int);
 struct ast * newid(int, int, char *, int, int);
 
 
-#line 173 "parser.tab.c" /* yacc.c:339  */
+#line 184 "parser.tab.c" /* yacc.c:339  */
 
 # ifndef YY_NULLPTR
 #  if defined __cplusplus && 201103L <= __cplusplus
@@ -243,14 +254,14 @@ extern int yydebug;
 
 union YYSTYPE
 {
-#line 110 "parser.y" /* yacc.c:355  */
+#line 121 "parser.y" /* yacc.c:355  */
 
 	int i;
 	double d;
 	char *s;
 	struct ast *a;
 
-#line 254 "parser.tab.c" /* yacc.c:355  */
+#line 265 "parser.tab.c" /* yacc.c:355  */
 };
 
 typedef union YYSTYPE YYSTYPE;
@@ -281,7 +292,7 @@ int yyparse (void);
 
 /* Copy the second part of user declarations.  */
 
-#line 285 "parser.tab.c" /* yacc.c:358  */
+#line 296 "parser.tab.c" /* yacc.c:358  */
 
 #ifdef short
 # undef short
@@ -583,13 +594,13 @@ static const yytype_uint8 yytranslate[] =
   /* YYRLINE[YYN] -- Source line where rule number YYN was defined.  */
 static const yytype_uint16 yyrline[] =
 {
-       0,   153,   153,   154,   155,   156,   159,   225,   229,   228,
-     326,   325,   342,   345,   346,   349,   350,   353,   470,   482,
-     488,   496,   497,   498,   499,   499,   504,   504,   574,   575,
-     576,   577,   578,   579,   579,   583,   586,   597,   603,   604,
-     608,   607,   633,   634,   658,   728,   799,   870,   941,  1012,
-    1017,  1016,  1140,  1143,  1182,  1222,  1262,  1301,  1314,  1317,
-    1318,  1319,  1320,  1321,  1379
+       0,   164,   164,   165,   166,   167,   170,   236,   240,   239,
+     351,   350,   367,   370,   371,   374,   375,   378,   495,   507,
+     513,   521,   522,   523,   525,   524,   539,   539,   611,   612,
+     613,   614,   615,   621,   620,   639,   642,   654,   661,   662,
+     666,   665,   690,   691,   716,   800,   883,   966,  1049,  1132,
+    1137,  1136,  1264,  1267,  1307,  1348,  1389,  1429,  1445,  1448,
+    1449,  1450,  1451,  1452,  1510
 };
 #endif
 
@@ -1540,7 +1551,7 @@ yyreduce:
   switch (yyn)
     {
         case 6:
-#line 160 "parser.y" /* yacc.c:1646  */
+#line 171 "parser.y" /* yacc.c:1646  */
     {
 					bool redeclared = false;
 
@@ -1587,7 +1598,7 @@ yyreduce:
 						temp->implemented = false;
 						temp->called = false;
 						temp->decl_lineno = yylineno;
-						
+						temp->label = next_label++;
 								
 						/* add to the head of the gtable list */
 						/* CAUTION**: test if gtable is empty */
@@ -1606,17 +1617,17 @@ yyreduce:
 									data_type[t_ret], (yyvsp[-4].s), data_type[t_val], yylineno);
 					}
 				}
-#line 1610 "parser.tab.c" /* yacc.c:1646  */
+#line 1621 "parser.tab.c" /* yacc.c:1646  */
     break;
 
   case 7:
-#line 225 "parser.y" /* yacc.c:1646  */
+#line 236 "parser.y" /* yacc.c:1646  */
     {yyerrok; }
-#line 1616 "parser.tab.c" /* yacc.c:1646  */
+#line 1627 "parser.tab.c" /* yacc.c:1646  */
     break;
 
   case 8:
-#line 229 "parser.y" /* yacc.c:1646  */
+#line 240 "parser.y" /* yacc.c:1646  */
     {
 						bool mismatched = false;
 						
@@ -1651,6 +1662,7 @@ yyreduce:
 
 						if(!found) { // no declaration
 
+
 							temp = (sym *)malloc(sizeof(sym));
 
 							strcpy(temp->name, (yyvsp[-4].s));
@@ -1660,6 +1672,11 @@ yyreduce:
 							temp->implemented = true;
 							temp->called = false;
 							temp->def_lineno = yylineno;
+							temp->label = next_label++;
+
+							// set start label to the label of main function
+							if(strcmp((yyvsp[-4].s), "main") == 0) 
+								start_label = temp->label;
 
 							/* add to the head of the gtable list */
 							/* CAUTION**: test if gtable is empty */
@@ -1680,6 +1697,10 @@ yyreduce:
 							temp->def_lineno = yylineno;
 
 							global = false;	// entered local scope
+
+							// ========= TARGET CODE GENERATION =========
+							fprintf(fd, "label %d\n", temp->label);
+							// ========= TARGET CODE GENERATION =========
 
 							/* ==== add function parameter to local table ==== */
 						
@@ -1702,12 +1723,16 @@ yyreduce:
 												data_type[t_val], (yyvsp[-1].s), yylineno);
 						}
 					}
-#line 1706 "parser.tab.c" /* yacc.c:1646  */
+#line 1727 "parser.tab.c" /* yacc.c:1646  */
     break;
 
   case 9:
-#line 315 "parser.y" /* yacc.c:1646  */
+#line 336 "parser.y" /* yacc.c:1646  */
     {
+
+						// TARGET CODE GENERATION
+						fprintf(fd, "RETURN\n");
+
 						global = true; // local scope ended
 						
 						/* free up memory for local table */
@@ -1717,19 +1742,19 @@ yyreduce:
 							free(temp);
 						}
 					}
-#line 1721 "parser.tab.c" /* yacc.c:1646  */
+#line 1746 "parser.tab.c" /* yacc.c:1646  */
     break;
 
   case 10:
-#line 326 "parser.y" /* yacc.c:1646  */
+#line 351 "parser.y" /* yacc.c:1646  */
     {
 						global = false;
 					}
-#line 1729 "parser.tab.c" /* yacc.c:1646  */
+#line 1754 "parser.tab.c" /* yacc.c:1646  */
     break;
 
   case 11:
-#line 330 "parser.y" /* yacc.c:1646  */
+#line 355 "parser.y" /* yacc.c:1646  */
     {
 						global = true; // local scope ended
 						
@@ -1740,11 +1765,11 @@ yyreduce:
 							free(temp);
 						}
 					}
-#line 1744 "parser.tab.c" /* yacc.c:1646  */
+#line 1769 "parser.tab.c" /* yacc.c:1646  */
     break;
 
   case 17:
-#line 354 "parser.y" /* yacc.c:1646  */
+#line 379 "parser.y" /* yacc.c:1646  */
     {
 				// search for variable redeclaration
 				while(head != NULL) { // loop through var_list
@@ -1861,11 +1886,11 @@ yyreduce:
 				temp = head = tail = NULL;
 
 			}
-#line 1865 "parser.tab.c" /* yacc.c:1646  */
+#line 1890 "parser.tab.c" /* yacc.c:1646  */
     break;
 
   case 18:
-#line 471 "parser.y" /* yacc.c:1646  */
+#line 496 "parser.y" /* yacc.c:1646  */
     {
 
 				while(head != NULL) {
@@ -1875,52 +1900,60 @@ yyreduce:
 				}
 				yyerrok;
 			}
-#line 1879 "parser.tab.c" /* yacc.c:1646  */
+#line 1904 "parser.tab.c" /* yacc.c:1646  */
     break;
 
   case 19:
-#line 483 "parser.y" /* yacc.c:1646  */
+#line 508 "parser.y" /* yacc.c:1646  */
     {	 
 				type_indicator++;
 				type_indicator %= 2;	
 				type[type_indicator] = TYPE_INT; 
 			}
-#line 1889 "parser.tab.c" /* yacc.c:1646  */
+#line 1914 "parser.tab.c" /* yacc.c:1646  */
     break;
 
   case 20:
-#line 489 "parser.y" /* yacc.c:1646  */
+#line 514 "parser.y" /* yacc.c:1646  */
     {
 				type_indicator++;
 				type_indicator %= 2;	
 				type[type_indicator] = TYPE_FLOAT;
 			}
-#line 1899 "parser.tab.c" /* yacc.c:1646  */
+#line 1924 "parser.tab.c" /* yacc.c:1646  */
     break;
 
   case 24:
-#line 499 "parser.y" /* yacc.c:1646  */
-    {printf("label %d\n", next_label++);}
-#line 1905 "parser.tab.c" /* yacc.c:1646  */
+#line 525 "parser.y" /* yacc.c:1646  */
+    {
+						whileStack[sp_while++] = next_label;
+						fprintf(fd, "label %d\n", next_label++);
+					}
+#line 1933 "parser.tab.c" /* yacc.c:1646  */
     break;
 
   case 25:
-#line 500 "parser.y" /* yacc.c:1646  */
+#line 530 "parser.y" /* yacc.c:1646  */
     {
-						printf("%s\n", jump_cmd); 
+						// TARGET CODE GENERATION
+						fprintf(fd, "JUMP %d\n", whileStack[sp_while-2]);
+						fprintf(fd, "label %d\n", whileStack[sp_while-1]);
+						// pop
+						sp_while -= 2;
+
 						isWHILE = false;
 					}
-#line 1914 "parser.tab.c" /* yacc.c:1646  */
+#line 1947 "parser.tab.c" /* yacc.c:1646  */
     break;
 
   case 26:
-#line 504 "parser.y" /* yacc.c:1646  */
+#line 539 "parser.y" /* yacc.c:1646  */
     {isDecl = false;}
-#line 1920 "parser.tab.c" /* yacc.c:1646  */
+#line 1953 "parser.tab.c" /* yacc.c:1646  */
     break;
 
   case 27:
-#line 505 "parser.y" /* yacc.c:1646  */
+#line 540 "parser.y" /* yacc.c:1646  */
     {
 						while(head != NULL) { /* loop for var_list */
 							
@@ -1936,9 +1969,10 @@ yyreduce:
 										printf("Local %s variable %s declared in line %d used in line %d.\n", 
 														data_type[temp->val_type], temp->name, temp->lineno, yylineno);
 										
-										// generate target code
+										// ============ TARGET CODE GENERATION =============
 										(temp->val_type == TYPE_INT) ? 
 											fprintf(fd, "READ %d\n", temp->mem_loc) : fprintf(fd, "READF %d\n", temp->mem_loc);
+										// ============ TARGET CODE GENERATION =============
 										
 										found = true;
 										break;
@@ -1957,9 +1991,10 @@ yyreduce:
 											printf("Global %s variable %s declared in line %d used in line %d.\n", 
 															data_type[temp->val_type], temp->name, temp->lineno, yylineno);
 											
-											// generate target code
+											// ============ TARGET CODE GENERATION =============
 											(temp->val_type == TYPE_INT) ? 
-											printf("READ %d\n", temp->mem_loc) : printf("READF %d\n", temp->mem_loc);
+												fprintf(fd, "READ %d\n", temp->mem_loc) : fprintf(fd, "READF %d\n", temp->mem_loc);
+											// ============ TARGET CODE GENERATION =============
 										}
 										else {
 											funcAsVar = true;
@@ -1990,53 +2025,77 @@ yyreduce:
 						} /* var_list loop */
 						head = tail = NULL;
 					}
-#line 1994 "parser.tab.c" /* yacc.c:1646  */
-    break;
-
-  case 32:
-#line 578 "parser.y" /* yacc.c:1646  */
-    {printf("label %d\n", next_label++);}
-#line 2000 "parser.tab.c" /* yacc.c:1646  */
-    break;
-
-  case 33:
-#line 579 "parser.y" /* yacc.c:1646  */
-    {printf("label %d\n", next_label++);}
-#line 2006 "parser.tab.c" /* yacc.c:1646  */
-    break;
-
-  case 36:
-#line 587 "parser.y" /* yacc.c:1646  */
-    {
-					if((yyvsp[0].a)->datatype == TYPE_INT) {
-						printf("WRITE ");
-						(yyvsp[0].a)->nodetype == 'N' ? printf("#%d\n", (int)((struct numval *)(yyvsp[0].a))->val) : printf("%d\n", (yyvsp[0].a)->mem_loc);
-					}
-					else {
-						printf("WRITEF ");
-						(yyvsp[0].a)->nodetype == 'N' ? printf("#%d\n", ((struct numval *)(yyvsp[0].a))->val) : printf("%d\n", (yyvsp[0].a)->mem_loc);
-					}
-				}
-#line 2021 "parser.tab.c" /* yacc.c:1646  */
-    break;
-
-  case 37:
-#line 598 "parser.y" /* yacc.c:1646  */
-    {	
-					printf("WRITES \"%s\"\n", (yyvsp[0].s));
-				}
 #line 2029 "parser.tab.c" /* yacc.c:1646  */
     break;
 
+  case 32:
+#line 616 "parser.y" /* yacc.c:1646  */
+    {
+						// TARGET CODE GENERATION
+						fprintf(fd, "label %d\n", ifStack[--sp_if]);
+					}
+#line 2038 "parser.tab.c" /* yacc.c:1646  */
+    break;
+
+  case 33:
+#line 621 "parser.y" /* yacc.c:1646  */
+    {
+						// TARGET CODE GENERATION
+						
+						// push elseStack
+						elseStack[sp_else++] = next_label;
+						fprintf(fd, "JUMP %d\n", next_label++);
+						
+						//pop ifStack
+						fprintf(fd, "label %d\n", ifStack[--sp_if]);
+					}
+#line 2053 "parser.tab.c" /* yacc.c:1646  */
+    break;
+
+  case 34:
+#line 632 "parser.y" /* yacc.c:1646  */
+    {
+						// pop elseStack
+						fprintf(fd, "label %d\n", elseStack[--sp_else]);
+					}
+#line 2062 "parser.tab.c" /* yacc.c:1646  */
+    break;
+
+  case 36:
+#line 643 "parser.y" /* yacc.c:1646  */
+    {
+					// TARGET CODE GENERATION
+					if((yyvsp[0].a)->datatype == TYPE_INT) {
+						fprintf(fd, "WRITE ");
+						(yyvsp[0].a)->nodetype == 'N' ? fprintf(fd, "#%d\n", (int)((struct numval *)(yyvsp[0].a))->val) : fprintf(fd, "%d\n", (yyvsp[0].a)->mem_loc);
+					}
+					else {
+						fprintf(fd, "WRITEF ");
+						(yyvsp[0].a)->nodetype == 'N' ? fprintf(fd, "#%d\n", ((struct numval *)(yyvsp[0].a))->val) : fprintf(fd, "%d\n", (yyvsp[0].a)->mem_loc);
+					}
+				}
+#line 2078 "parser.tab.c" /* yacc.c:1646  */
+    break;
+
+  case 37:
+#line 655 "parser.y" /* yacc.c:1646  */
+    {	
+					// TARGET CODE GENERATION
+					fprintf(fd, "WRITES \"%s\"\n", (yyvsp[0].s));
+				}
+#line 2087 "parser.tab.c" /* yacc.c:1646  */
+    break;
+
   case 40:
-#line 608 "parser.y" /* yacc.c:1646  */
+#line 666 "parser.y" /* yacc.c:1646  */
     {
 					if(head == NULL) {
 						head = (sym *)malloc(sizeof(sym));
 
 						strcpy(head->name, (yyvsp[0].s));
 
-						if(isDecl) {
+						if(isDecl) 
+						{
 							head->val_type = type[type_indicator];
 							head->isGlobal = global;
 							head->lineno = yylineno;
@@ -2048,29 +2107,29 @@ yyreduce:
 						head->next = NULL;
 						tail = head;		
 					}
-					else {
-						printf("ERROR line %d: head is not NULL.\n", yylineno);
-					}
+					else { printf("ERROR line %d: head is not NULL.\n", yylineno); }
 				}
-#line 2056 "parser.tab.c" /* yacc.c:1646  */
+#line 2113 "parser.tab.c" /* yacc.c:1646  */
     break;
 
   case 41:
-#line 630 "parser.y" /* yacc.c:1646  */
+#line 687 "parser.y" /* yacc.c:1646  */
     {isDecl = true;}
-#line 2062 "parser.tab.c" /* yacc.c:1646  */
+#line 2119 "parser.tab.c" /* yacc.c:1646  */
     break;
 
   case 43:
-#line 635 "parser.y" /* yacc.c:1646  */
+#line 692 "parser.y" /* yacc.c:1646  */
     {	
 						if(tail != NULL) {
+							
 							tail->next = (sym *)malloc(sizeof(sym));
 							tail = tail->next;
 
 							strcpy(tail->name, (yyvsp[0].s));
 
-							if(isDecl) {
+							if(isDecl) 
+							{
 								tail->val_type = type[type_indicator];
 								tail->isGlobal = global;
 								tail->lineno = yylineno;
@@ -2078,17 +2137,16 @@ yyreduce:
 								tail->declared = false;
 								tail->implemented = false;
 							}
-								tail->next = NULL;
+
+							tail->next = NULL;
 						}
-						else {
-							printf("ERROR line %d: tail is NULL.\n", yylineno);
-						}
+						else { printf("ERROR line %d: tail is NULL.\n", yylineno); }
 					}
-#line 2088 "parser.tab.c" /* yacc.c:1646  */
+#line 2146 "parser.tab.c" /* yacc.c:1646  */
     break;
 
   case 44:
-#line 659 "parser.y" /* yacc.c:1646  */
+#line 717 "parser.y" /* yacc.c:1646  */
     {
 					if((yyvsp[-2].a)->datatype != (yyvsp[0].a)->datatype) { // error: MIXED TYPE in logic op
 						
@@ -2112,6 +2170,8 @@ yyreduce:
 					}
 					else if(isWHILE || isIF) {
 						
+						// TARGET CODE GENERATION
+
 						char operand1[50];
 						char operand2[50];
 				
@@ -2127,12 +2187,19 @@ yyreduce:
 							else
 								sprintf(operand2, "%d", (yyvsp[0].a)->mem_loc);
 							
-							if(isWHILE) {
-								sprintf(jump_cmd, "JEQ %s %s %d", operand1, operand2, next_label-1);
+							if(isWHILE) { 
+								// push 
+								whileStack[sp_while++] = next_label;
+								fprintf(fd, "JNE %s %s %d\n", operand1, operand2, next_label++);
+								
+								isWHILE = false;
 							}
 							else if(isIF) {
-								sprintf(jump_cmd, "JNE %s %s %d", operand1, operand2, next_label);
-								printf("%s\n", jump_cmd);
+								//push
+								ifStack[sp_if++] = next_label;
+								fprintf(fd, "JNE %s %s %d\n", operand1, operand2, next_label++);
+								
+								isIF = false;
 							}
 						}
 						else { // TYPE_FLOAT
@@ -2148,21 +2215,26 @@ yyreduce:
 								sprintf(operand2, "%d", (yyvsp[0].a)->mem_loc);
 
 							if(isWHILE) {
-								sprintf(jump_cmd, "JEQF %s %s %d", operand1, operand2, next_label-1);
+								// push
+								whileStack[sp_while++] = next_label;
+								fprintf(fd, "JEQF %s %s %d\n", operand1, operand2, next_label++);
+								isWHILE = false;
 							}
 							else if(isIF) {
-								sprintf(jump_cmd, "JNEF %s %s %d", operand1, operand2, next_label);
-								printf("%s\n", jump_cmd);
+								// push
+								ifStack[sp_if++] = next_label;
+								fprintf(fd, "JNEF %s %s %d\n", operand1, operand2, next_label++);
+								isIF = false;
 							}
 						}
 					}
 						
 				}
-#line 2162 "parser.tab.c" /* yacc.c:1646  */
+#line 2234 "parser.tab.c" /* yacc.c:1646  */
     break;
 
   case 45:
-#line 729 "parser.y" /* yacc.c:1646  */
+#line 801 "parser.y" /* yacc.c:1646  */
     {
 					if((yyvsp[-2].a)->datatype != (yyvsp[0].a)->datatype) { // error: MIXED TYPE in logic op
 						
@@ -2186,6 +2258,8 @@ yyreduce:
 					}
 					else if(isWHILE || isIF) {
 						
+						// TARGET CODE GENERATION
+
 						char operand1[50];
 						char operand2[50];
 				
@@ -2202,11 +2276,16 @@ yyreduce:
 								sprintf(operand2, "%d", (yyvsp[0].a)->mem_loc);
 							
 							if(isWHILE) {
-								sprintf(jump_cmd, "JLT %s %s %d", operand1, operand2, next_label-1);
+								// push
+								whileStack[sp_while++] = next_label;
+								fprintf(fd, "JLT %s %s %d\n", operand1, operand2, next_label++);
+								isWHILE = false;	
 							}
 							else if(isIF) {
-								sprintf(jump_cmd, "JGE %s %s %d", operand1, operand2, next_label);
-								printf("%s\n", jump_cmd);
+								// push
+								ifStack[sp_if++] = next_label;
+								fprintf(fd, "JGE %s %s %d\n", operand1, operand2, next_label++);
+								isIF = false;
 							}
 						}
 						else { // TYPE_FLOAT
@@ -2222,21 +2301,26 @@ yyreduce:
 								sprintf(operand2, "%d", (yyvsp[0].a)->mem_loc);
 
 							if(isWHILE) {
-								sprintf(jump_cmd, "JLTF %s %s %d", operand1, operand2, next_label-1);
+								// push
+								whileStack[sp_while++] = next_label;
+								fprintf(fd, "JLTF %s %s %d\n", operand1, operand2, next_label++);
+								isWHILE = false;
 							}
 							else if(isIF) {
-								sprintf(jump_cmd, "JGEF %s %s %d", operand1, operand2, next_label);
-								printf("%s\n", jump_cmd);
+								// push
+								ifStack[sp_if++] = next_label;
+								fprintf(fd, "JGEF %s %s %d\n", operand1, operand2, next_label++);
+								isIF = false;
 							}
 						}
 					}
 						
 				}
-#line 2236 "parser.tab.c" /* yacc.c:1646  */
+#line 2320 "parser.tab.c" /* yacc.c:1646  */
     break;
 
   case 46:
-#line 800 "parser.y" /* yacc.c:1646  */
+#line 884 "parser.y" /* yacc.c:1646  */
     {
 					if((yyvsp[-2].a)->datatype != (yyvsp[0].a)->datatype) { // error: MIXED TYPE in logic op
 						
@@ -2260,6 +2344,8 @@ yyreduce:
 					}
 					else if(isWHILE || isIF) {
 						
+						// TARGET CODE GENERATION
+
 						char operand1[50];
 						char operand2[50];
 				
@@ -2276,11 +2362,16 @@ yyreduce:
 								sprintf(operand2, "%d", (yyvsp[0].a)->mem_loc);
 							
 							if(isWHILE) {
-								sprintf(jump_cmd, "JLE %s %s %d", operand1, operand2, next_label-1);
+								// push
+								whileStack[sp_while++] = next_label;
+								fprintf(fd, "JLE %s %s %d\n", operand1, operand2, next_label++);
+								isWHILE = false;
 							}
 							else if(isIF) {
-								sprintf(jump_cmd, "JGT %s %s %d", operand1, operand2, next_label);
-								printf("%s\n", jump_cmd);
+								// push
+								ifStack[sp_if++] = next_label;
+								fprintf(fd, "JGT %s %s %d\n", operand1, operand2, next_label++);
+								isIF = false;
 							}
 						}
 						else { // TYPE_FLOAT
@@ -2296,21 +2387,26 @@ yyreduce:
 								sprintf(operand2, "%d", (yyvsp[0].a)->mem_loc);
 
 							if(isWHILE) {
-								sprintf(jump_cmd, "JLEF %s %s %d", operand1, operand2, next_label-1);
+								// push
+								whileStack[sp_while++] = next_label;
+								fprintf(fd, "JLEF %s %s %d\n", operand1, operand2, next_label++);
+								isWHILE = false;
 							}
 							else if(isIF) {
-								sprintf(jump_cmd, "JGTF %s %s %d", operand1, operand2, next_label);
-								printf("%s\n", jump_cmd);
+								// push
+								ifStack[sp_if++] = next_label;
+								fprintf(fd, "JGTF %s %s %d\n", operand1, operand2, next_label++);
+								isIF = false;
 							}
 						}
 					}
 						
 				}
-#line 2310 "parser.tab.c" /* yacc.c:1646  */
+#line 2406 "parser.tab.c" /* yacc.c:1646  */
     break;
 
   case 47:
-#line 871 "parser.y" /* yacc.c:1646  */
+#line 967 "parser.y" /* yacc.c:1646  */
     {
 					if((yyvsp[-2].a)->datatype != (yyvsp[0].a)->datatype) { // error: MIXED TYPE in logic op
 						
@@ -2334,6 +2430,8 @@ yyreduce:
 					}
 					else if(isWHILE || isIF) {
 						
+						// TARGET CODE GENERATION
+
 						char operand1[50];
 						char operand2[50];
 				
@@ -2350,11 +2448,16 @@ yyreduce:
 								sprintf(operand2, "%d", (yyvsp[0].a)->mem_loc);
 							
 							if(isWHILE) {
-								sprintf(jump_cmd, "JGT %s %s %d", operand1, operand2, next_label-1);
+								// push
+								whileStack[sp_while++] = next_label;
+								fprintf(fd, "JGT %s %s %d\n", operand1, operand2, next_label++);
+								isWHILE = false;
 							}
 							else if(isIF) {
-								sprintf(jump_cmd, "JLE %s %s %d", operand1, operand2, next_label);
-								printf("%s\n", jump_cmd);
+								// push
+								ifStack[sp_if++] = next_label;
+								fprintf(fd, "JLE %s %s %d\n", operand1, operand2, next_label++);
+								isIF = false;
 							}
 						}
 						else { // TYPE_FLOAT
@@ -2370,21 +2473,26 @@ yyreduce:
 								sprintf(operand2, "%d", (yyvsp[0].a)->mem_loc);
 
 							if(isWHILE) {
-								sprintf(jump_cmd, "JGTF %s %s %d", operand1, operand2, next_label-1);
+								// push
+								whileStack[sp_while++] = next_label;
+								fprintf(fd, "JGTF %s %s %d\n", operand1, operand2, next_label++);
+								isWHILE = false;
 							}
 							else if(isIF) {
-								sprintf(jump_cmd, "JLEF %s %s %d", operand1, operand2, next_label);
-								printf("%s\n", jump_cmd);
+								// push
+								ifStack[sp_if++] = next_label;
+								fprintf(fd, "JLEF %s %s %d\n", operand1, operand2, next_label++);
+								isIF = false;
 							}
 						}
 					}
 						
 				}
-#line 2384 "parser.tab.c" /* yacc.c:1646  */
+#line 2492 "parser.tab.c" /* yacc.c:1646  */
     break;
 
   case 48:
-#line 942 "parser.y" /* yacc.c:1646  */
+#line 1050 "parser.y" /* yacc.c:1646  */
     {
 					if((yyvsp[-2].a)->datatype != (yyvsp[0].a)->datatype) { // error: MIXED TYPE in logic op
 						
@@ -2408,6 +2516,8 @@ yyreduce:
 					}
 					else if(isWHILE || isIF) {
 						
+						// TARGET CODE GENERATION
+
 						char operand1[50];
 						char operand2[50];
 				
@@ -2424,11 +2534,16 @@ yyreduce:
 								sprintf(operand2, "%d", (yyvsp[0].a)->mem_loc);
 							
 							if(isWHILE) {
-								sprintf(jump_cmd, "JGE %s %s %d", operand1, operand2, next_label-1);
+								// push
+								whileStack[sp_while++] = next_label;
+								fprintf(fd, "JGE %s %s %d\n", operand1, operand2, next_label++);
+								isWHILE = false;
 							}
 							else if(isIF) {
-								sprintf(jump_cmd, "JLT %s %s %d", operand1, operand2, next_label);
-								printf("%s\n", jump_cmd);
+								// push
+								ifStack[sp_if++] = next_label;
+								fprintf(fd, "JLT %s %s %d\n", operand1, operand2, next_label++);
+								isIF = false;
 							}
 						}
 						else { // TYPE_FLOAT
@@ -2444,27 +2559,32 @@ yyreduce:
 								sprintf(operand2, "%d", (yyvsp[0].a)->mem_loc);
 
 							if(isWHILE) {
-								sprintf(jump_cmd, "JGEF %s %s %d", operand1, operand2, next_label-1);
+								// push
+								whileStack[sp_while++] = next_label;
+								fprintf(fd, "JGEF %s %s %d\n", operand1, operand2, next_label++);
+								isWHILE = false;
 							}
 							else if(isIF) {
-								sprintf(jump_cmd, "JLTF %s %s %d", operand1, operand2, next_label);
-								printf("%s\n", jump_cmd);
+								// push
+								ifStack[sp_if++] = next_label;
+								fprintf(fd, "JLTF %s %s %d\n", operand1, operand2, next_label++);
+								isIF = false;
 							}
 						}
 					}
 						
 				}
-#line 2458 "parser.tab.c" /* yacc.c:1646  */
+#line 2578 "parser.tab.c" /* yacc.c:1646  */
     break;
 
   case 49:
-#line 1012 "parser.y" /* yacc.c:1646  */
+#line 1132 "parser.y" /* yacc.c:1646  */
     {printf("ERROR: boolean operator is expected. Line: %d\n", yylineno-1);}
-#line 2464 "parser.tab.c" /* yacc.c:1646  */
+#line 2584 "parser.tab.c" /* yacc.c:1646  */
     break;
 
   case 50:
-#line 1017 "parser.y" /* yacc.c:1646  */
+#line 1137 "parser.y" /* yacc.c:1646  */
     {
 					funcAsVar = false;
 					found = false;
@@ -2506,11 +2626,11 @@ yyreduce:
 						}
 					}
 				}
-#line 2510 "parser.tab.c" /* yacc.c:1646  */
+#line 2630 "parser.tab.c" /* yacc.c:1646  */
     break;
 
   case 51:
-#line 1059 "parser.y" /* yacc.c:1646  */
+#line 1179 "parser.y" /* yacc.c:1646  */
     {
 					funcAsVar = false;
 					found = false;
@@ -2531,15 +2651,17 @@ yyreduce:
 									(yyval.a)  = (yyvsp[0].a);
 								}
 								else {
+
+									// TARGET CODE GENERATION
 									if(temp->val_type == TYPE_INT) {
-										printf("COPY ");
-										(yyvsp[0].a)->nodetype == 'N' ? printf("#%d ", (int)((struct numval *)(yyvsp[0].a))->val) : printf("%d ", (yyvsp[0].a)->mem_loc);
-										printf("%d\n", temp->mem_loc);
+										fprintf(fd, "COPY ");
+										(yyvsp[0].a)->nodetype == 'N' ? fprintf(fd, "#%d ", (int)((struct numval *)(yyvsp[0].a))->val) : fprintf(fd, "%d ", (yyvsp[0].a)->mem_loc);
+										fprintf(fd, "%d\n", temp->mem_loc);
 									}
 									else {
-										printf("COPYF ");
-										(yyvsp[0].a)->nodetype == 'N' ? printf("#%lf ", ((struct numval *)(yyvsp[0].a))->val) : printf("%d ", (yyvsp[0].a)->mem_loc);
-										printf("%d\n", temp->mem_loc);
+										fprintf(fd, "COPYF ");
+										(yyvsp[0].a)->nodetype == 'N' ? fprintf(fd, "#%lf ", ((struct numval *)(yyvsp[0].a))->val) : fprintf(fd, "%d ", (yyvsp[0].a)->mem_loc);
+										fprintf(fd, "%d\n", temp->mem_loc);
 									}
 	
 									(yyval.a) = (yyvsp[0].a);
@@ -2557,7 +2679,7 @@ yyreduce:
 						while(temp != NULL) { /* global symbol table */
 							if(strcmp(temp->name, (yyvsp[-3].s)) == 0 && !(temp->declared) && !(temp->implemented)) {
 
-								// AST =======================================================================
+								// AST AND TARGET CODE GENERATION ============================================
 
 								if((yyvsp[0].a)->datatype != temp->val_type) {
 									printf("ERROR: Value of wrong type assigned to %s variable %s. Line: %d.\n",
@@ -2565,15 +2687,17 @@ yyreduce:
 									(yyval.a) = (yyvsp[0].a);
 								}
 								else {
+
+									// TARGET CODE GENERATION
 									if(temp->val_type == TYPE_INT) {
-										printf("COPY ");
-										(yyvsp[0].a)->nodetype == 'N' ? printf("#%d ", (int)((struct numval *)(yyvsp[0].a))->val) : printf("%d ", (yyvsp[0].a)->mem_loc);
-										printf("%d\n", temp->mem_loc);
+										fprintf(fd, "COPY ");
+										(yyvsp[0].a)->nodetype == 'N' ? fprintf(fd, "#%d ", (int)((struct numval *)(yyvsp[0].a))->val) : fprintf(fd, "%d ", (yyvsp[0].a)->mem_loc);
+										fprintf(fd, "%d\n", temp->mem_loc);
 									}
 									else {
-										printf("COPYF ");
-										(yyvsp[0].a)->nodetype == 'N' ? printf("#%lf ", ((struct numval *)(yyvsp[0].a))->val) : printf("%d ", (yyvsp[0].a)->mem_loc);
-										printf("%d\n", temp->mem_loc);
+										fprintf(fd, "COPYF ");
+										(yyvsp[0].a)->nodetype == 'N' ? fprintf(fd, "#%lf ", ((struct numval *)(yyvsp[0].a))->val) : fprintf(fd, "%d ", (yyvsp[0].a)->mem_loc);
+										fprintf(fd, "%d\n", temp->mem_loc);
 									}
 	
 									(yyval.a) = (yyvsp[0].a);
@@ -2592,12 +2716,13 @@ yyreduce:
 					}
 					if(!found) { (yyval.a) = NULL; }
 				}
-#line 2596 "parser.tab.c" /* yacc.c:1646  */
+#line 2720 "parser.tab.c" /* yacc.c:1646  */
     break;
 
   case 53:
-#line 1144 "parser.y" /* yacc.c:1646  */
+#line 1268 "parser.y" /* yacc.c:1646  */
     { 
+					// AST
 					(yyval.a) = newast('+', (yyvsp[-2].a), (yyvsp[0].a));
 
 					if((yyvsp[-2].a)->datatype != (yyvsp[0].a)->datatype) { // error: mixed types in arithmetic op
@@ -2620,27 +2745,28 @@ yyreduce:
 							printf("%s value. Line: %d\n", data_type[(yyvsp[0].a)->datatype], yylineno);
 						}
 					}
-					else { // TARGET CODE GENERATION
-
+					else { 
+						// TARGET CODE GENERATION
 						if((yyval.a)->datatype == TYPE_INT) {
-							printf("ADD ");
-							(yyvsp[-2].a)->nodetype == 'N' ? printf("#%d ", (int)((struct numval *)(yyvsp[-2].a))->val) : printf("%d ", (yyvsp[-2].a)->mem_loc);
-							(yyvsp[0].a)->nodetype == 'N' ? printf("#%d ", (int)((struct numval *)(yyvsp[0].a))->val) : printf("%d ", (yyvsp[0].a)->mem_loc);
+							fprintf(fd, "ADD ");
+							(yyvsp[-2].a)->nodetype == 'N' ? fprintf(fd, "#%d ", (int)((struct numval *)(yyvsp[-2].a))->val) : fprintf(fd, "%d ", (yyvsp[-2].a)->mem_loc);
+							(yyvsp[0].a)->nodetype == 'N' ? fprintf(fd, "#%d ", (int)((struct numval *)(yyvsp[0].a))->val) : fprintf(fd, "%d ", (yyvsp[0].a)->mem_loc);
 						}
 						else {
-							printf("ADDF ");
-							(yyvsp[-2].a)->nodetype == 'N' ? printf("#%lf ", ((struct numval *)(yyvsp[-2].a))->val) : printf("%d ", (yyvsp[-2].a)->mem_loc);
-							(yyvsp[0].a)->nodetype == 'N' ? printf("#%lf ", ((struct numval *)(yyvsp[0].a))->val) : printf("%d ", (yyvsp[0].a)->mem_loc);
+							fprintf(fd, "ADDF ");
+							(yyvsp[-2].a)->nodetype == 'N' ? fprintf(fd, "#%lf ", ((struct numval *)(yyvsp[-2].a))->val) : fprintf(fd, "%d ", (yyvsp[-2].a)->mem_loc);
+							(yyvsp[0].a)->nodetype == 'N' ? fprintf(fd, "#%lf ", ((struct numval *)(yyvsp[0].a))->val) : fprintf(fd, "%d ", (yyvsp[0].a)->mem_loc);
 						}
-						printf("%d\n", (yyval.a)->mem_loc);
+						fprintf(fd, "%d\n", (yyval.a)->mem_loc);
 					}
 				}
-#line 2639 "parser.tab.c" /* yacc.c:1646  */
+#line 2764 "parser.tab.c" /* yacc.c:1646  */
     break;
 
   case 54:
-#line 1183 "parser.y" /* yacc.c:1646  */
+#line 1308 "parser.y" /* yacc.c:1646  */
     {
+					// AST
 					(yyval.a) = newast('-', (yyvsp[-2].a), (yyvsp[0].a));
 
 					if((yyvsp[-2].a)->datatype != (yyvsp[0].a)->datatype) { // error: mixed types in arithmetic op
@@ -2664,27 +2790,28 @@ yyreduce:
 						}
 
 					}
-					else { // TARGET CODE GENERATION
-
+					else { 
+						// TARGET CODE GENERATION
 						if((yyval.a)->datatype == TYPE_INT) {
-							printf("SUB ");
-							(yyvsp[-2].a)->nodetype == 'N' ? printf("#%d ", (int)((struct numval *)(yyvsp[-2].a))->val) : printf("%d ", (yyvsp[-2].a)->mem_loc);
-							(yyvsp[0].a)->nodetype == 'N' ? printf("#%d ", (int)((struct numval *)(yyvsp[0].a))->val) : printf("%d ", (yyvsp[0].a)->mem_loc);
+							fprintf(fd, "SUB ");
+							(yyvsp[-2].a)->nodetype == 'N' ? fprintf(fd, "#%d ", (int)((struct numval *)(yyvsp[-2].a))->val) : fprintf(fd, "%d ", (yyvsp[-2].a)->mem_loc);
+							(yyvsp[0].a)->nodetype == 'N' ? fprintf(fd, "#%d ", (int)((struct numval *)(yyvsp[0].a))->val) : fprintf(fd, "%d ", (yyvsp[0].a)->mem_loc);
 						}
 						else {
-							printf("SUBF ");
-							(yyvsp[-2].a)->nodetype == 'N' ? printf("#%lf ", ((struct numval *)(yyvsp[-2].a))->val) : printf("%d ", (yyvsp[-2].a)->mem_loc);
-							(yyvsp[0].a)->nodetype == 'N' ? printf("#%lf ", ((struct numval *)(yyvsp[0].a))->val) : printf("%d ", (yyvsp[0].a)->mem_loc);
+							fprintf(fd, "SUBF ");
+							(yyvsp[-2].a)->nodetype == 'N' ? fprintf(fd, "#%lf ", ((struct numval *)(yyvsp[-2].a))->val) : fprintf(fd, "%d ", (yyvsp[-2].a)->mem_loc);
+							(yyvsp[0].a)->nodetype == 'N' ? fprintf(fd, "#%lf ", ((struct numval *)(yyvsp[0].a))->val) : fprintf(fd, "%d ", (yyvsp[0].a)->mem_loc);
 						}
-						printf("%d\n", (yyval.a)->mem_loc);
+						fprintf(fd, "%d\n", (yyval.a)->mem_loc);
 					}
 				}
-#line 2683 "parser.tab.c" /* yacc.c:1646  */
+#line 2809 "parser.tab.c" /* yacc.c:1646  */
     break;
 
   case 55:
-#line 1223 "parser.y" /* yacc.c:1646  */
+#line 1349 "parser.y" /* yacc.c:1646  */
     {
+					// AST	
 					(yyval.a) = newast('*', (yyvsp[-2].a), (yyvsp[0].a));
 
  					if((yyvsp[-2].a)->datatype != (yyvsp[0].a)->datatype) { // error: mixed types in arithmetic op
@@ -2708,27 +2835,28 @@ yyreduce:
 						}
 
 					}
-					else { // TARGET CODE GENERATION
-
+					else { 
+						// TARGET CODE GENERATION
 						if((yyval.a)->datatype == TYPE_INT) {
-							printf("MUL ");
-							(yyvsp[-2].a)->nodetype == 'N' ? printf("#%d ", (int)((struct numval *)(yyvsp[-2].a))->val) : printf("%d ", (yyvsp[-2].a)->mem_loc);
-							(yyvsp[0].a)->nodetype == 'N' ? printf("#%d ", (int)((struct numval *)(yyvsp[0].a))->val) : printf("%d ", (yyvsp[0].a)->mem_loc);
+							fprintf(fd, "MUL ");
+							(yyvsp[-2].a)->nodetype == 'N' ? fprintf(fd, "#%d ", (int)((struct numval *)(yyvsp[-2].a))->val) : fprintf(fd, "%d ", (yyvsp[-2].a)->mem_loc);
+							(yyvsp[0].a)->nodetype == 'N' ? fprintf(fd, "#%d ", (int)((struct numval *)(yyvsp[0].a))->val) : fprintf(fd, "%d ", (yyvsp[0].a)->mem_loc);
 						}
 						else {
-							printf("MULF ");
-							(yyvsp[-2].a)->nodetype == 'N' ? printf("#%lf ", ((struct numval *)(yyvsp[-2].a))->val) : printf("%d ", (yyvsp[-2].a)->mem_loc);
-							(yyvsp[0].a)->nodetype == 'N' ? printf("#%lf ", ((struct numval *)(yyvsp[0].a))->val) : printf("%d ", (yyvsp[0].a)->mem_loc);
+							fprintf(fd, "MULF ");
+							(yyvsp[-2].a)->nodetype == 'N' ? fprintf(fd, "#%lf ", ((struct numval *)(yyvsp[-2].a))->val) : fprintf(fd, "%d ", (yyvsp[-2].a)->mem_loc);
+							(yyvsp[0].a)->nodetype == 'N' ? fprintf(fd, "#%lf ", ((struct numval *)(yyvsp[0].a))->val) : fprintf(fd, "%d ", (yyvsp[0].a)->mem_loc);
 						}
-						printf("%d\n", (yyval.a)->mem_loc);
+						fprintf(fd, "%d\n", (yyval.a)->mem_loc);
 					}
 				}
-#line 2727 "parser.tab.c" /* yacc.c:1646  */
+#line 2854 "parser.tab.c" /* yacc.c:1646  */
     break;
 
   case 56:
-#line 1263 "parser.y" /* yacc.c:1646  */
+#line 1390 "parser.y" /* yacc.c:1646  */
     {
+					// AST
 					(yyval.a) = newast('/', (yyvsp[-2].a), (yyvsp[0].a));
 
 					if((yyvsp[-2].a)->datatype != (yyvsp[0].a)->datatype) { // error: mixed types in arithmetic op
@@ -2751,61 +2879,64 @@ yyreduce:
 							printf("%s value. Line: %d\n", data_type[(yyvsp[0].a)->datatype], yylineno);
 						}
 					}
-					else { // TARGET CODE GENERATION 
-						
+					else { 
+						// TARGET CODE GENERATION 
 						if((yyval.a)->datatype == TYPE_INT) {
-							printf("DIV ");
-							(yyvsp[-2].a)->nodetype == 'N' ? printf("#%d ", (int)((struct numval *)(yyvsp[-2].a))->val) : printf("%d ", (yyvsp[-2].a)->mem_loc);
-							(yyvsp[0].a)->nodetype == 'N' ? printf("#%d ", (int)((struct numval *)(yyvsp[0].a))->val) : printf("%d ", (yyvsp[0].a)->mem_loc);
+							fprintf(fd, "DIV ");
+							(yyvsp[-2].a)->nodetype == 'N' ? fprintf(fd, "#%d ", (int)((struct numval *)(yyvsp[-2].a))->val) : fprintf(fd, "%d ", (yyvsp[-2].a)->mem_loc);
+							(yyvsp[0].a)->nodetype == 'N' ? fprintf(fd, "#%d ", (int)((struct numval *)(yyvsp[0].a))->val) : fprintf(fd, "%d ", (yyvsp[0].a)->mem_loc);
 						}
 						else {
-							printf("DIVF ");
-							(yyvsp[-2].a)->nodetype == 'N' ? printf("#%lf ", ((struct numval *)(yyvsp[-2].a))->val) : printf("%d ", (yyvsp[-2].a)->mem_loc);
-							(yyvsp[0].a)->nodetype == 'N' ? printf("#%lf ", ((struct numval *)(yyvsp[0].a))->val) : printf("%d ", (yyvsp[0].a)->mem_loc);
+							fprintf(fd, "DIVF ");
+							(yyvsp[-2].a)->nodetype == 'N' ? fprintf(fd, "#%lf ", ((struct numval *)(yyvsp[-2].a))->val) : fprintf(fd, "%d ", (yyvsp[-2].a)->mem_loc);
+							(yyvsp[0].a)->nodetype == 'N' ? fprintf(fd, "#%lf ", ((struct numval *)(yyvsp[0].a))->val) : fprintf(fd, "%d ", (yyvsp[0].a)->mem_loc);
 						}
-						printf("%d\n", (yyval.a)->mem_loc);
+						fprintf(fd, "%d\n", (yyval.a)->mem_loc);
 					}
 				}
-#line 2770 "parser.tab.c" /* yacc.c:1646  */
+#line 2898 "parser.tab.c" /* yacc.c:1646  */
     break;
 
   case 57:
-#line 1302 "parser.y" /* yacc.c:1646  */
+#line 1430 "parser.y" /* yacc.c:1646  */
     { 
+					// AST
 					(yyval.a) = newast('M', (yyvsp[0].a), NULL); 
+
+					// TARGET CODE GENERATION
 					if((yyval.a)->datatype == TYPE_INT) {
-						printf("NEG ");
-						(yyvsp[0].a)->nodetype == 'N' ? printf("#%d ", (int)((struct numval *)(yyvsp[0].a))->val) : printf("%d ", (yyvsp[0].a)->mem_loc);
+						fprintf(fd, "NEG ");
+						(yyvsp[0].a)->nodetype == 'N' ? fprintf(fd, "#%d ", (int)((struct numval *)(yyvsp[0].a))->val) : fprintf(fd, "%d ", (yyvsp[0].a)->mem_loc);
 					}
 					else {
-						printf("NEGF ");
-						(yyvsp[0].a)->nodetype == 'N' ? printf("#%lf ", ((struct numval *)(yyvsp[0].a))->val) : printf("%d ", (yyvsp[0].a)->mem_loc);
+						fprintf(fd, "NEGF ");
+						(yyvsp[0].a)->nodetype == 'N' ? fprintf(fd, "#%lf ", ((struct numval *)(yyvsp[0].a))->val) : fprintf(fd, "%d ", (yyvsp[0].a)->mem_loc);
 					}
-					printf("%d\n", (yyval.a)->mem_loc);
+					fprintf(fd, "%d\n", (yyval.a)->mem_loc);
 				}
-#line 2787 "parser.tab.c" /* yacc.c:1646  */
+#line 2918 "parser.tab.c" /* yacc.c:1646  */
     break;
 
   case 59:
-#line 1317 "parser.y" /* yacc.c:1646  */
+#line 1448 "parser.y" /* yacc.c:1646  */
     { (yyval.a) = newnum((yyvsp[0].i), TYPE_INT); }
-#line 2793 "parser.tab.c" /* yacc.c:1646  */
+#line 2924 "parser.tab.c" /* yacc.c:1646  */
     break;
 
   case 60:
-#line 1318 "parser.y" /* yacc.c:1646  */
+#line 1449 "parser.y" /* yacc.c:1646  */
     { (yyval.a) = newnum((yyvsp[0].d), TYPE_FLOAT); }
-#line 2799 "parser.tab.c" /* yacc.c:1646  */
+#line 2930 "parser.tab.c" /* yacc.c:1646  */
     break;
 
   case 62:
-#line 1320 "parser.y" /* yacc.c:1646  */
+#line 1451 "parser.y" /* yacc.c:1646  */
     { (yyval.a) = (yyvsp[-1].a); }
-#line 2805 "parser.tab.c" /* yacc.c:1646  */
+#line 2936 "parser.tab.c" /* yacc.c:1646  */
     break;
 
   case 63:
-#line 1322 "parser.y" /* yacc.c:1646  */
+#line 1453 "parser.y" /* yacc.c:1646  */
     {
 					found = false;
 					funcAsVar = false;
@@ -2861,18 +2992,18 @@ yyreduce:
 						}
 					}
 				}
-#line 2865 "parser.tab.c" /* yacc.c:1646  */
+#line 2996 "parser.tab.c" /* yacc.c:1646  */
     break;
 
   case 64:
-#line 1380 "parser.y" /* yacc.c:1646  */
+#line 1511 "parser.y" /* yacc.c:1646  */
     {
 						varAsFunc = false;
 						found = false;
 
-						if(ltable != NULL) {
+						if(ltable != NULL) { /* check if a variable is used as a function */
 							temp = ltable;
-							while(temp != NULL) { /* check if a variable is used as a function */
+							while(temp != NULL) { 
 								if(strcmp(temp->name, (yyvsp[-3].s)) == 0) {
 									printf("ERROR line %d: variable %s used as function.\n", 
 																		yylineno, temp->name);
@@ -2886,6 +3017,7 @@ yyreduce:
 								temp = temp->next;
 							}
 						}
+
 						if(found == false && gtable != NULL) {
 							temp = gtable;
 							while(temp != NULL) {
@@ -2894,6 +3026,10 @@ yyreduce:
 										temp->called = true;
 										printf("Function %s defined in line %d used in line %d.\n", 
 															temp->name, temp->def_lineno, yylineno);
+
+										// ========== TARGET CODE GENERATION ==============
+										fprintf(fd, "CALL %d\n", temp->label);
+
 										// AST ==================================================================
 										(yyval.a) = newnum(0.0, temp->ret_type);
 
@@ -2909,6 +3045,10 @@ yyreduce:
 										temp->called = true;
 										printf("Function %s declared in line %d used in line %d.\n", 
 															temp->name, temp->decl_lineno, yylineno);
+
+										// ========== TARGET CODE GENERATION ==============
+										fprintf(fd, "CALL %d\n", temp->label);
+
 										// AST ==================================================================
 										(yyval.a) = newnum(0.0, temp->ret_type);
 										
@@ -2939,11 +3079,11 @@ yyreduce:
 							}
 						}
 					}
-#line 2943 "parser.tab.c" /* yacc.c:1646  */
+#line 3083 "parser.tab.c" /* yacc.c:1646  */
     break;
 
 
-#line 2947 "parser.tab.c" /* yacc.c:1646  */
+#line 3087 "parser.tab.c" /* yacc.c:1646  */
       default: break;
     }
   /* User semantic actions sometimes alter yychar, and that requires
@@ -3178,7 +3318,7 @@ yyreturn:
 #endif
   return yyresult;
 }
-#line 1455 "parser.y" /* yacc.c:1906  */
+#line 1595 "parser.y" /* yacc.c:1906  */
 
 
 main(int argc, char **argv)
@@ -3196,6 +3336,14 @@ main(int argc, char **argv)
 		temp = gtable;
 		gtable = gtable->next;
 		free(temp);
+	}
+	
+	// print START instruction
+	if(start_label != -1) {
+		fprintf(fd, "START %d\n", start_label);
+	}
+	else {
+		printf("ERROR: no START label found!\n");
 	}
 
 	fclose(fd);

@@ -1,0 +1,33 @@
+int func(int);
+
+int main(int q) {
+
+	int a, b, c;
+	float x, y, z;
+
+	a+b-c;
+	x*y/z;
+
+	if(a-b > 4){
+		read a;
+	}
+	else {
+		if(x*y >=z)
+			a = b / c;
+		else
+			a = b * c;
+
+		while(z <= 0.0) {
+			write "this is in the while loop";
+			read z;
+		}
+
+		func(a-b+c);
+	}
+
+}
+
+int func(int z) {
+	write "entered func";
+	return z*2;
+}

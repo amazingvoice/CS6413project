@@ -11,7 +11,7 @@
 #define TYPE_FLOAT 2
 
 
-FILE *fd; // target code file
+FILE *fd; // target code file descriptor
 
 
 char *data_type[3] = {"INVALID", "int", "float"};
@@ -31,6 +31,7 @@ int next_mem_loc = 0;
 int bak_mem_loc;
 
 /* label */
+int start_label = -1;
 int next_label = 0;
 
 /* symbol table */
@@ -49,6 +50,7 @@ typedef struct symbol {
 	bool called;
 	int  decl_lineno;	
 	int  def_lineno;
+	int  label;
 
 	struct symbol *next;
 } sym;
@@ -74,6 +76,15 @@ bool isWhile = false;
 bool IFblock = false;
 
 char jump_cmd[100];
+
+// Stack
+int whileStack[100];
+int ifStack[100];
+int elseStack[100];
+// stack pointer
+int sp_while = 0;
+int sp_if = 0;
+int sp_else = 0;
 
 /* AST */
 struct ast {
@@ -203,7 +214,7 @@ function_decl:	kind ID LPAR kind RPAR SEMICOLON
 						temp->implemented = false;
 						temp->called = false;
 						temp->decl_lineno = yylineno;
-						
+						temp->label = next_label++;
 								
 						/* add to the head of the gtable list */
 						/* CAUTION**: test if gtable is empty */
@@ -260,6 +271,7 @@ function_def	:	kind ID LPAR kind ID RPAR
 
 						if(!found) { // no declaration
 
+
 							temp = (sym *)malloc(sizeof(sym));
 
 							strcpy(temp->name, $2);
@@ -269,6 +281,11 @@ function_def	:	kind ID LPAR kind ID RPAR
 							temp->implemented = true;
 							temp->called = false;
 							temp->def_lineno = yylineno;
+							temp->label = next_label++;
+
+							// set start label to the label of main function
+							if(strcmp($2, "main") == 0) 
+								start_label = temp->label;
 
 							/* add to the head of the gtable list */
 							/* CAUTION**: test if gtable is empty */
@@ -289,6 +306,10 @@ function_def	:	kind ID LPAR kind ID RPAR
 							temp->def_lineno = yylineno;
 
 							global = false;	// entered local scope
+
+							// ========= TARGET CODE GENERATION =========
+							fprintf(fd, "label %d\n", temp->label);
+							// ========= TARGET CODE GENERATION =========
 
 							/* ==== add function parameter to local table ==== */
 						
@@ -313,6 +334,10 @@ function_def	:	kind ID LPAR kind ID RPAR
 					}
 					body
 					{
+
+						// TARGET CODE GENERATION
+						fprintf(fd, "RETURN\n");
+
 						global = true; // local scope ended
 						
 						/* free up memory for local table */
@@ -496,9 +521,19 @@ kind	:	KW_INT
 stmt			:	LBRACE stmts RBRACE 
 				|	expr SEMICOLON 
 				|	error SEMICOLON	 
-				|	KW_WHILE {printf("label %d\n", next_label++);} LPAR bool_expr RPAR stmt 
+				|	KW_WHILE 
 					{
-						printf("%s\n", jump_cmd); 
+						whileStack[sp_while++] = next_label;
+						fprintf(fd, "label %d\n", next_label++);
+					} 
+					LPAR bool_expr RPAR stmt 
+					{
+						// TARGET CODE GENERATION
+						fprintf(fd, "JUMP %d\n", whileStack[sp_while-2]);
+						fprintf(fd, "label %d\n", whileStack[sp_while-1]);
+						// pop
+						sp_while -= 2;
+
 						isWHILE = false;
 					}
 				|	KW_READ {isDecl = false;} var_list SEMICOLON
@@ -517,9 +552,10 @@ stmt			:	LBRACE stmts RBRACE
 										printf("Local %s variable %s declared in line %d used in line %d.\n", 
 														data_type[temp->val_type], temp->name, temp->lineno, yylineno);
 										
-										// generate target code
+										// ============ TARGET CODE GENERATION =============
 										(temp->val_type == TYPE_INT) ? 
 											fprintf(fd, "READ %d\n", temp->mem_loc) : fprintf(fd, "READF %d\n", temp->mem_loc);
+										// ============ TARGET CODE GENERATION =============
 										
 										found = true;
 										break;
@@ -538,9 +574,10 @@ stmt			:	LBRACE stmts RBRACE
 											printf("Global %s variable %s declared in line %d used in line %d.\n", 
 															data_type[temp->val_type], temp->name, temp->lineno, yylineno);
 											
-											// generate target code
+											// ============ TARGET CODE GENERATION =============
 											(temp->val_type == TYPE_INT) ? 
-											printf("READ %d\n", temp->mem_loc) : printf("READF %d\n", temp->mem_loc);
+												fprintf(fd, "READ %d\n", temp->mem_loc) : fprintf(fd, "READF %d\n", temp->mem_loc);
+											// ============ TARGET CODE GENERATION =============
 										}
 										else {
 											funcAsVar = true;
@@ -575,8 +612,27 @@ stmt			:	LBRACE stmts RBRACE
 				|	KW_WRITE write_expr_list SEMICOLON
 				|	KW_WRITE error SEMICOLON
 				|	KW_RETURN expr SEMICOLON
-				|	KW_IF LPAR bool_expr RPAR stmt {printf("label %d\n", next_label++);}
-				|	KW_IF LPAR bool_expr RPAR stmt KW_ELSE {printf("label %d\n", next_label++);} stmt 
+				|	KW_IF LPAR bool_expr RPAR stmt 
+					{
+						// TARGET CODE GENERATION
+						fprintf(fd, "label %d\n", ifStack[--sp_if]);
+					}
+				|	KW_IF LPAR bool_expr RPAR stmt KW_ELSE 
+					{
+						// TARGET CODE GENERATION
+						
+						// push elseStack
+						elseStack[sp_else++] = next_label;
+						fprintf(fd, "JUMP %d\n", next_label++);
+						
+						//pop ifStack
+						fprintf(fd, "label %d\n", ifStack[--sp_if]);
+					} 
+					stmt 
+					{
+						// pop elseStack
+						fprintf(fd, "label %d\n", elseStack[--sp_else]);
+					}
 				;
 
 
@@ -585,18 +641,20 @@ write_expr_list	:	wlist_unit wlist_rep
 
 wlist_unit 	:	expr
 				{
+					// TARGET CODE GENERATION
 					if($1->datatype == TYPE_INT) {
-						printf("WRITE ");
-						$1->nodetype == 'N' ? printf("#%d\n", (int)((struct numval *)$1)->val) : printf("%d\n", $1->mem_loc);
+						fprintf(fd, "WRITE ");
+						$1->nodetype == 'N' ? fprintf(fd, "#%d\n", (int)((struct numval *)$1)->val) : fprintf(fd, "%d\n", $1->mem_loc);
 					}
 					else {
-						printf("WRITEF ");
-						$1->nodetype == 'N' ? printf("#%d\n", ((struct numval *)$1)->val) : printf("%d\n", $1->mem_loc);
+						fprintf(fd, "WRITEF ");
+						$1->nodetype == 'N' ? fprintf(fd, "#%d\n", ((struct numval *)$1)->val) : fprintf(fd, "%d\n", $1->mem_loc);
 					}
 				}
 			|	STRING_LIT
 				{	
-					printf("WRITES \"%s\"\n", $1);
+					// TARGET CODE GENERATION
+					fprintf(fd, "WRITES \"%s\"\n", $1);
 				}
 			;
 
@@ -611,7 +669,8 @@ var_list	:	ID
 
 						strcpy(head->name, $1);
 
-						if(isDecl) {
+						if(isDecl) 
+						{
 							head->val_type = type[type_indicator];
 							head->isGlobal = global;
 							head->lineno = yylineno;
@@ -623,9 +682,7 @@ var_list	:	ID
 						head->next = NULL;
 						tail = head;		
 					}
-					else {
-						printf("ERROR line %d: head is not NULL.\n", yylineno);
-					}
+					else { printf("ERROR line %d: head is not NULL.\n", yylineno); }
 				} 
 				var_list_rep {isDecl = true;}
 			;
@@ -634,12 +691,14 @@ var_list_rep	:
 				|	var_list_rep COMMA ID 
 					{	
 						if(tail != NULL) {
+							
 							tail->next = (sym *)malloc(sizeof(sym));
 							tail = tail->next;
 
 							strcpy(tail->name, $3);
 
-							if(isDecl) {
+							if(isDecl) 
+							{
 								tail->val_type = type[type_indicator];
 								tail->isGlobal = global;
 								tail->lineno = yylineno;
@@ -647,11 +706,10 @@ var_list_rep	:
 								tail->declared = false;
 								tail->implemented = false;
 							}
-								tail->next = NULL;
+
+							tail->next = NULL;
 						}
-						else {
-							printf("ERROR line %d: tail is NULL.\n", yylineno);
-						}
+						else { printf("ERROR line %d: tail is NULL.\n", yylineno); }
 					}
 				;
 
@@ -679,6 +737,8 @@ bool_expr	:	expr OP_EQ expr
 					}
 					else if(isWHILE || isIF) {
 						
+						// TARGET CODE GENERATION
+
 						char operand1[50];
 						char operand2[50];
 				
@@ -694,12 +754,19 @@ bool_expr	:	expr OP_EQ expr
 							else
 								sprintf(operand2, "%d", $3->mem_loc);
 							
-							if(isWHILE) {
-								sprintf(jump_cmd, "JEQ %s %s %d", operand1, operand2, next_label-1);
+							if(isWHILE) { 
+								// push 
+								whileStack[sp_while++] = next_label;
+								fprintf(fd, "JNE %s %s %d\n", operand1, operand2, next_label++);
+								
+								isWHILE = false;
 							}
 							else if(isIF) {
-								sprintf(jump_cmd, "JNE %s %s %d", operand1, operand2, next_label);
-								printf("%s\n", jump_cmd);
+								//push
+								ifStack[sp_if++] = next_label;
+								fprintf(fd, "JNE %s %s %d\n", operand1, operand2, next_label++);
+								
+								isIF = false;
 							}
 						}
 						else { // TYPE_FLOAT
@@ -715,11 +782,16 @@ bool_expr	:	expr OP_EQ expr
 								sprintf(operand2, "%d", $3->mem_loc);
 
 							if(isWHILE) {
-								sprintf(jump_cmd, "JEQF %s %s %d", operand1, operand2, next_label-1);
+								// push
+								whileStack[sp_while++] = next_label;
+								fprintf(fd, "JEQF %s %s %d\n", operand1, operand2, next_label++);
+								isWHILE = false;
 							}
 							else if(isIF) {
-								sprintf(jump_cmd, "JNEF %s %s %d", operand1, operand2, next_label);
-								printf("%s\n", jump_cmd);
+								// push
+								ifStack[sp_if++] = next_label;
+								fprintf(fd, "JNEF %s %s %d\n", operand1, operand2, next_label++);
+								isIF = false;
 							}
 						}
 					}
@@ -749,6 +821,8 @@ bool_expr	:	expr OP_EQ expr
 					}
 					else if(isWHILE || isIF) {
 						
+						// TARGET CODE GENERATION
+
 						char operand1[50];
 						char operand2[50];
 				
@@ -765,11 +839,16 @@ bool_expr	:	expr OP_EQ expr
 								sprintf(operand2, "%d", $3->mem_loc);
 							
 							if(isWHILE) {
-								sprintf(jump_cmd, "JLT %s %s %d", operand1, operand2, next_label-1);
+								// push
+								whileStack[sp_while++] = next_label;
+								fprintf(fd, "JLT %s %s %d\n", operand1, operand2, next_label++);
+								isWHILE = false;	
 							}
 							else if(isIF) {
-								sprintf(jump_cmd, "JGE %s %s %d", operand1, operand2, next_label);
-								printf("%s\n", jump_cmd);
+								// push
+								ifStack[sp_if++] = next_label;
+								fprintf(fd, "JGE %s %s %d\n", operand1, operand2, next_label++);
+								isIF = false;
 							}
 						}
 						else { // TYPE_FLOAT
@@ -785,11 +864,16 @@ bool_expr	:	expr OP_EQ expr
 								sprintf(operand2, "%d", $3->mem_loc);
 
 							if(isWHILE) {
-								sprintf(jump_cmd, "JLTF %s %s %d", operand1, operand2, next_label-1);
+								// push
+								whileStack[sp_while++] = next_label;
+								fprintf(fd, "JLTF %s %s %d\n", operand1, operand2, next_label++);
+								isWHILE = false;
 							}
 							else if(isIF) {
-								sprintf(jump_cmd, "JGEF %s %s %d", operand1, operand2, next_label);
-								printf("%s\n", jump_cmd);
+								// push
+								ifStack[sp_if++] = next_label;
+								fprintf(fd, "JGEF %s %s %d\n", operand1, operand2, next_label++);
+								isIF = false;
 							}
 						}
 					}
@@ -820,6 +904,8 @@ bool_expr	:	expr OP_EQ expr
 					}
 					else if(isWHILE || isIF) {
 						
+						// TARGET CODE GENERATION
+
 						char operand1[50];
 						char operand2[50];
 				
@@ -836,11 +922,16 @@ bool_expr	:	expr OP_EQ expr
 								sprintf(operand2, "%d", $3->mem_loc);
 							
 							if(isWHILE) {
-								sprintf(jump_cmd, "JLE %s %s %d", operand1, operand2, next_label-1);
+								// push
+								whileStack[sp_while++] = next_label;
+								fprintf(fd, "JLE %s %s %d\n", operand1, operand2, next_label++);
+								isWHILE = false;
 							}
 							else if(isIF) {
-								sprintf(jump_cmd, "JGT %s %s %d", operand1, operand2, next_label);
-								printf("%s\n", jump_cmd);
+								// push
+								ifStack[sp_if++] = next_label;
+								fprintf(fd, "JGT %s %s %d\n", operand1, operand2, next_label++);
+								isIF = false;
 							}
 						}
 						else { // TYPE_FLOAT
@@ -856,11 +947,16 @@ bool_expr	:	expr OP_EQ expr
 								sprintf(operand2, "%d", $3->mem_loc);
 
 							if(isWHILE) {
-								sprintf(jump_cmd, "JLEF %s %s %d", operand1, operand2, next_label-1);
+								// push
+								whileStack[sp_while++] = next_label;
+								fprintf(fd, "JLEF %s %s %d\n", operand1, operand2, next_label++);
+								isWHILE = false;
 							}
 							else if(isIF) {
-								sprintf(jump_cmd, "JGTF %s %s %d", operand1, operand2, next_label);
-								printf("%s\n", jump_cmd);
+								// push
+								ifStack[sp_if++] = next_label;
+								fprintf(fd, "JGTF %s %s %d\n", operand1, operand2, next_label++);
+								isIF = false;
 							}
 						}
 					}
@@ -891,6 +987,8 @@ bool_expr	:	expr OP_EQ expr
 					}
 					else if(isWHILE || isIF) {
 						
+						// TARGET CODE GENERATION
+
 						char operand1[50];
 						char operand2[50];
 				
@@ -907,11 +1005,16 @@ bool_expr	:	expr OP_EQ expr
 								sprintf(operand2, "%d", $3->mem_loc);
 							
 							if(isWHILE) {
-								sprintf(jump_cmd, "JGT %s %s %d", operand1, operand2, next_label-1);
+								// push
+								whileStack[sp_while++] = next_label;
+								fprintf(fd, "JGT %s %s %d\n", operand1, operand2, next_label++);
+								isWHILE = false;
 							}
 							else if(isIF) {
-								sprintf(jump_cmd, "JLE %s %s %d", operand1, operand2, next_label);
-								printf("%s\n", jump_cmd);
+								// push
+								ifStack[sp_if++] = next_label;
+								fprintf(fd, "JLE %s %s %d\n", operand1, operand2, next_label++);
+								isIF = false;
 							}
 						}
 						else { // TYPE_FLOAT
@@ -927,11 +1030,16 @@ bool_expr	:	expr OP_EQ expr
 								sprintf(operand2, "%d", $3->mem_loc);
 
 							if(isWHILE) {
-								sprintf(jump_cmd, "JGTF %s %s %d", operand1, operand2, next_label-1);
+								// push
+								whileStack[sp_while++] = next_label;
+								fprintf(fd, "JGTF %s %s %d\n", operand1, operand2, next_label++);
+								isWHILE = false;
 							}
 							else if(isIF) {
-								sprintf(jump_cmd, "JLEF %s %s %d", operand1, operand2, next_label);
-								printf("%s\n", jump_cmd);
+								// push
+								ifStack[sp_if++] = next_label;
+								fprintf(fd, "JLEF %s %s %d\n", operand1, operand2, next_label++);
+								isIF = false;
 							}
 						}
 					}
@@ -962,6 +1070,8 @@ bool_expr	:	expr OP_EQ expr
 					}
 					else if(isWHILE || isIF) {
 						
+						// TARGET CODE GENERATION
+
 						char operand1[50];
 						char operand2[50];
 				
@@ -978,11 +1088,16 @@ bool_expr	:	expr OP_EQ expr
 								sprintf(operand2, "%d", $3->mem_loc);
 							
 							if(isWHILE) {
-								sprintf(jump_cmd, "JGE %s %s %d", operand1, operand2, next_label-1);
+								// push
+								whileStack[sp_while++] = next_label;
+								fprintf(fd, "JGE %s %s %d\n", operand1, operand2, next_label++);
+								isWHILE = false;
 							}
 							else if(isIF) {
-								sprintf(jump_cmd, "JLT %s %s %d", operand1, operand2, next_label);
-								printf("%s\n", jump_cmd);
+								// push
+								ifStack[sp_if++] = next_label;
+								fprintf(fd, "JLT %s %s %d\n", operand1, operand2, next_label++);
+								isIF = false;
 							}
 						}
 						else { // TYPE_FLOAT
@@ -998,11 +1113,16 @@ bool_expr	:	expr OP_EQ expr
 								sprintf(operand2, "%d", $3->mem_loc);
 
 							if(isWHILE) {
-								sprintf(jump_cmd, "JGEF %s %s %d", operand1, operand2, next_label-1);
+								// push
+								whileStack[sp_while++] = next_label;
+								fprintf(fd, "JGEF %s %s %d\n", operand1, operand2, next_label++);
+								isWHILE = false;
 							}
 							else if(isIF) {
-								sprintf(jump_cmd, "JLTF %s %s %d", operand1, operand2, next_label);
-								printf("%s\n", jump_cmd);
+								// push
+								ifStack[sp_if++] = next_label;
+								fprintf(fd, "JLTF %s %s %d\n", operand1, operand2, next_label++);
+								isIF = false;
 							}
 						}
 					}
@@ -1076,15 +1196,17 @@ expr		:	ID
 									$$  = $4;
 								}
 								else {
+
+									// TARGET CODE GENERATION
 									if(temp->val_type == TYPE_INT) {
-										printf("COPY ");
-										$4->nodetype == 'N' ? printf("#%d ", (int)((struct numval *)$4)->val) : printf("%d ", $4->mem_loc);
-										printf("%d\n", temp->mem_loc);
+										fprintf(fd, "COPY ");
+										$4->nodetype == 'N' ? fprintf(fd, "#%d ", (int)((struct numval *)$4)->val) : fprintf(fd, "%d ", $4->mem_loc);
+										fprintf(fd, "%d\n", temp->mem_loc);
 									}
 									else {
-										printf("COPYF ");
-										$4->nodetype == 'N' ? printf("#%lf ", ((struct numval *)$4)->val) : printf("%d ", $4->mem_loc);
-										printf("%d\n", temp->mem_loc);
+										fprintf(fd, "COPYF ");
+										$4->nodetype == 'N' ? fprintf(fd, "#%lf ", ((struct numval *)$4)->val) : fprintf(fd, "%d ", $4->mem_loc);
+										fprintf(fd, "%d\n", temp->mem_loc);
 									}
 	
 									$$ = $4;
@@ -1102,7 +1224,7 @@ expr		:	ID
 						while(temp != NULL) { /* global symbol table */
 							if(strcmp(temp->name, $1) == 0 && !(temp->declared) && !(temp->implemented)) {
 
-								// AST =======================================================================
+								// AST AND TARGET CODE GENERATION ============================================
 
 								if($4->datatype != temp->val_type) {
 									printf("ERROR: Value of wrong type assigned to %s variable %s. Line: %d.\n",
@@ -1110,15 +1232,17 @@ expr		:	ID
 									$$ = $4;
 								}
 								else {
+
+									// TARGET CODE GENERATION
 									if(temp->val_type == TYPE_INT) {
-										printf("COPY ");
-										$4->nodetype == 'N' ? printf("#%d ", (int)((struct numval *)$4)->val) : printf("%d ", $4->mem_loc);
-										printf("%d\n", temp->mem_loc);
+										fprintf(fd, "COPY ");
+										$4->nodetype == 'N' ? fprintf(fd, "#%d ", (int)((struct numval *)$4)->val) : fprintf(fd, "%d ", $4->mem_loc);
+										fprintf(fd, "%d\n", temp->mem_loc);
 									}
 									else {
-										printf("COPYF ");
-										$4->nodetype == 'N' ? printf("#%lf ", ((struct numval *)$4)->val) : printf("%d ", $4->mem_loc);
-										printf("%d\n", temp->mem_loc);
+										fprintf(fd, "COPYF ");
+										$4->nodetype == 'N' ? fprintf(fd, "#%lf ", ((struct numval *)$4)->val) : fprintf(fd, "%d ", $4->mem_loc);
+										fprintf(fd, "%d\n", temp->mem_loc);
 									}
 	
 									$$ = $4;
@@ -1142,6 +1266,7 @@ expr		:	ID
 
 expr1		:	expr1 OP_PLUS expr1 
 				{ 
+					// AST
 					$$ = newast('+', $1, $3);
 
 					if($1->datatype != $3->datatype) { // error: mixed types in arithmetic op
@@ -1164,23 +1289,24 @@ expr1		:	expr1 OP_PLUS expr1
 							printf("%s value. Line: %d\n", data_type[$3->datatype], yylineno);
 						}
 					}
-					else { // TARGET CODE GENERATION
-
+					else { 
+						// TARGET CODE GENERATION
 						if($$->datatype == TYPE_INT) {
-							printf("ADD ");
-							$1->nodetype == 'N' ? printf("#%d ", (int)((struct numval *)$1)->val) : printf("%d ", $1->mem_loc);
-							$3->nodetype == 'N' ? printf("#%d ", (int)((struct numval *)$3)->val) : printf("%d ", $3->mem_loc);
+							fprintf(fd, "ADD ");
+							$1->nodetype == 'N' ? fprintf(fd, "#%d ", (int)((struct numval *)$1)->val) : fprintf(fd, "%d ", $1->mem_loc);
+							$3->nodetype == 'N' ? fprintf(fd, "#%d ", (int)((struct numval *)$3)->val) : fprintf(fd, "%d ", $3->mem_loc);
 						}
 						else {
-							printf("ADDF ");
-							$1->nodetype == 'N' ? printf("#%lf ", ((struct numval *)$1)->val) : printf("%d ", $1->mem_loc);
-							$3->nodetype == 'N' ? printf("#%lf ", ((struct numval *)$3)->val) : printf("%d ", $3->mem_loc);
+							fprintf(fd, "ADDF ");
+							$1->nodetype == 'N' ? fprintf(fd, "#%lf ", ((struct numval *)$1)->val) : fprintf(fd, "%d ", $1->mem_loc);
+							$3->nodetype == 'N' ? fprintf(fd, "#%lf ", ((struct numval *)$3)->val) : fprintf(fd, "%d ", $3->mem_loc);
 						}
-						printf("%d\n", $$->mem_loc);
+						fprintf(fd, "%d\n", $$->mem_loc);
 					}
 				}
 			|	expr1 OP_MINUS expr1 
 				{
+					// AST
 					$$ = newast('-', $1, $3);
 
 					if($1->datatype != $3->datatype) { // error: mixed types in arithmetic op
@@ -1204,23 +1330,24 @@ expr1		:	expr1 OP_PLUS expr1
 						}
 
 					}
-					else { // TARGET CODE GENERATION
-
+					else { 
+						// TARGET CODE GENERATION
 						if($$->datatype == TYPE_INT) {
-							printf("SUB ");
-							$1->nodetype == 'N' ? printf("#%d ", (int)((struct numval *)$1)->val) : printf("%d ", $1->mem_loc);
-							$3->nodetype == 'N' ? printf("#%d ", (int)((struct numval *)$3)->val) : printf("%d ", $3->mem_loc);
+							fprintf(fd, "SUB ");
+							$1->nodetype == 'N' ? fprintf(fd, "#%d ", (int)((struct numval *)$1)->val) : fprintf(fd, "%d ", $1->mem_loc);
+							$3->nodetype == 'N' ? fprintf(fd, "#%d ", (int)((struct numval *)$3)->val) : fprintf(fd, "%d ", $3->mem_loc);
 						}
 						else {
-							printf("SUBF ");
-							$1->nodetype == 'N' ? printf("#%lf ", ((struct numval *)$1)->val) : printf("%d ", $1->mem_loc);
-							$3->nodetype == 'N' ? printf("#%lf ", ((struct numval *)$3)->val) : printf("%d ", $3->mem_loc);
+							fprintf(fd, "SUBF ");
+							$1->nodetype == 'N' ? fprintf(fd, "#%lf ", ((struct numval *)$1)->val) : fprintf(fd, "%d ", $1->mem_loc);
+							$3->nodetype == 'N' ? fprintf(fd, "#%lf ", ((struct numval *)$3)->val) : fprintf(fd, "%d ", $3->mem_loc);
 						}
-						printf("%d\n", $$->mem_loc);
+						fprintf(fd, "%d\n", $$->mem_loc);
 					}
 				}
 			|	expr1 OP_MULT expr1 
 				{
+					// AST	
 					$$ = newast('*', $1, $3);
 
  					if($1->datatype != $3->datatype) { // error: mixed types in arithmetic op
@@ -1244,23 +1371,24 @@ expr1		:	expr1 OP_PLUS expr1
 						}
 
 					}
-					else { // TARGET CODE GENERATION
-
+					else { 
+						// TARGET CODE GENERATION
 						if($$->datatype == TYPE_INT) {
-							printf("MUL ");
-							$1->nodetype == 'N' ? printf("#%d ", (int)((struct numval *)$1)->val) : printf("%d ", $1->mem_loc);
-							$3->nodetype == 'N' ? printf("#%d ", (int)((struct numval *)$3)->val) : printf("%d ", $3->mem_loc);
+							fprintf(fd, "MUL ");
+							$1->nodetype == 'N' ? fprintf(fd, "#%d ", (int)((struct numval *)$1)->val) : fprintf(fd, "%d ", $1->mem_loc);
+							$3->nodetype == 'N' ? fprintf(fd, "#%d ", (int)((struct numval *)$3)->val) : fprintf(fd, "%d ", $3->mem_loc);
 						}
 						else {
-							printf("MULF ");
-							$1->nodetype == 'N' ? printf("#%lf ", ((struct numval *)$1)->val) : printf("%d ", $1->mem_loc);
-							$3->nodetype == 'N' ? printf("#%lf ", ((struct numval *)$3)->val) : printf("%d ", $3->mem_loc);
+							fprintf(fd, "MULF ");
+							$1->nodetype == 'N' ? fprintf(fd, "#%lf ", ((struct numval *)$1)->val) : fprintf(fd, "%d ", $1->mem_loc);
+							$3->nodetype == 'N' ? fprintf(fd, "#%lf ", ((struct numval *)$3)->val) : fprintf(fd, "%d ", $3->mem_loc);
 						}
-						printf("%d\n", $$->mem_loc);
+						fprintf(fd, "%d\n", $$->mem_loc);
 					}
 				}
 			|	expr1 OP_DIV expr1 
 				{
+					// AST
 					$$ = newast('/', $1, $3);
 
 					if($1->datatype != $3->datatype) { // error: mixed types in arithmetic op
@@ -1283,33 +1411,36 @@ expr1		:	expr1 OP_PLUS expr1
 							printf("%s value. Line: %d\n", data_type[$3->datatype], yylineno);
 						}
 					}
-					else { // TARGET CODE GENERATION 
-						
+					else { 
+						// TARGET CODE GENERATION 
 						if($$->datatype == TYPE_INT) {
-							printf("DIV ");
-							$1->nodetype == 'N' ? printf("#%d ", (int)((struct numval *)$1)->val) : printf("%d ", $1->mem_loc);
-							$3->nodetype == 'N' ? printf("#%d ", (int)((struct numval *)$3)->val) : printf("%d ", $3->mem_loc);
+							fprintf(fd, "DIV ");
+							$1->nodetype == 'N' ? fprintf(fd, "#%d ", (int)((struct numval *)$1)->val) : fprintf(fd, "%d ", $1->mem_loc);
+							$3->nodetype == 'N' ? fprintf(fd, "#%d ", (int)((struct numval *)$3)->val) : fprintf(fd, "%d ", $3->mem_loc);
 						}
 						else {
-							printf("DIVF ");
-							$1->nodetype == 'N' ? printf("#%lf ", ((struct numval *)$1)->val) : printf("%d ", $1->mem_loc);
-							$3->nodetype == 'N' ? printf("#%lf ", ((struct numval *)$3)->val) : printf("%d ", $3->mem_loc);
+							fprintf(fd, "DIVF ");
+							$1->nodetype == 'N' ? fprintf(fd, "#%lf ", ((struct numval *)$1)->val) : fprintf(fd, "%d ", $1->mem_loc);
+							$3->nodetype == 'N' ? fprintf(fd, "#%lf ", ((struct numval *)$3)->val) : fprintf(fd, "%d ", $3->mem_loc);
 						}
-						printf("%d\n", $$->mem_loc);
+						fprintf(fd, "%d\n", $$->mem_loc);
 					}
 				}
 			|	OP_MINUS factor %prec UMINUS 
 				{ 
+					// AST
 					$$ = newast('M', $2, NULL); 
+
+					// TARGET CODE GENERATION
 					if($$->datatype == TYPE_INT) {
-						printf("NEG ");
-						$2->nodetype == 'N' ? printf("#%d ", (int)((struct numval *)$2)->val) : printf("%d ", $2->mem_loc);
+						fprintf(fd, "NEG ");
+						$2->nodetype == 'N' ? fprintf(fd, "#%d ", (int)((struct numval *)$2)->val) : fprintf(fd, "%d ", $2->mem_loc);
 					}
 					else {
-						printf("NEGF ");
-						$2->nodetype == 'N' ? printf("#%lf ", ((struct numval *)$2)->val) : printf("%d ", $2->mem_loc);
+						fprintf(fd, "NEGF ");
+						$2->nodetype == 'N' ? fprintf(fd, "#%lf ", ((struct numval *)$2)->val) : fprintf(fd, "%d ", $2->mem_loc);
 					}
-					printf("%d\n", $$->mem_loc);
+					fprintf(fd, "%d\n", $$->mem_loc);
 				}
 			|	factor
 			;
@@ -1381,9 +1512,9 @@ function_call	:	ID LPAR expr RPAR
 						varAsFunc = false;
 						found = false;
 
-						if(ltable != NULL) {
+						if(ltable != NULL) { /* check if a variable is used as a function */
 							temp = ltable;
-							while(temp != NULL) { /* check if a variable is used as a function */
+							while(temp != NULL) { 
 								if(strcmp(temp->name, $1) == 0) {
 									printf("ERROR line %d: variable %s used as function.\n", 
 																		yylineno, temp->name);
@@ -1397,6 +1528,7 @@ function_call	:	ID LPAR expr RPAR
 								temp = temp->next;
 							}
 						}
+
 						if(found == false && gtable != NULL) {
 							temp = gtable;
 							while(temp != NULL) {
@@ -1405,6 +1537,10 @@ function_call	:	ID LPAR expr RPAR
 										temp->called = true;
 										printf("Function %s defined in line %d used in line %d.\n", 
 															temp->name, temp->def_lineno, yylineno);
+
+										// ========== TARGET CODE GENERATION ==============
+										fprintf(fd, "CALL %d\n", temp->label);
+
 										// AST ==================================================================
 										$$ = newnum(0.0, temp->ret_type);
 
@@ -1420,6 +1556,10 @@ function_call	:	ID LPAR expr RPAR
 										temp->called = true;
 										printf("Function %s declared in line %d used in line %d.\n", 
 															temp->name, temp->decl_lineno, yylineno);
+
+										// ========== TARGET CODE GENERATION ==============
+										fprintf(fd, "CALL %d\n", temp->label);
+
 										// AST ==================================================================
 										$$ = newnum(0.0, temp->ret_type);
 										
@@ -1469,6 +1609,14 @@ main(int argc, char **argv)
 		temp = gtable;
 		gtable = gtable->next;
 		free(temp);
+	}
+	
+	// print START instruction
+	if(start_label != -1) {
+		fprintf(fd, "START %d\n", start_label);
+	}
+	else {
+		printf("ERROR: no START label found!\n");
 	}
 
 	fclose(fd);
