@@ -23,7 +23,7 @@ int main(int dummy)
     if (k > 0)
       write "1";
     else
-      write("0");
+      write ("0");
 
       c = c-1;
   }

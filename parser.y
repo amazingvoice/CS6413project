@@ -230,6 +230,7 @@ function_decl:	kind ID LPAR kind RPAR SEMICOLON
 						temp->decl_lineno = yylineno;
 
 						temp->label = next_label++;			 // allocate label number
+						temp->mem_loc = next_mem_loc++;		 // allocate memory location for parameter
 						temp->ret_mem_loc = next_mem_loc++;  // allocate memory location for return value
 								
 						/* add to the head of the gtable list */
@@ -334,14 +335,19 @@ function_def	:	kind ID LPAR kind ID RPAR
 							/* ==== add function parameter to local table ==== */
 						
 							temp = (sym *)malloc(sizeof(sym));
-
+							// ****from now on, temp is a new location for the parameter, not for the function
 							strcpy(temp->name, $5);
 							temp->val_type = t_val;
 							temp->isGlobal = false;
 							temp->lineno = yylineno;
 							// set memory location
-							temp->mem_loc = next_mem_loc++;
-							current_func->mem_loc = temp->mem_loc;						
+							if(!(current_func->declared)) {
+								temp->mem_loc = next_mem_loc++;
+								current_func->mem_loc = temp->mem_loc;
+							}
+							else {
+								temp->mem_loc = current_func->mem_loc;
+							}
 
 							temp->declared = false;
 							temp->implemented = false;
@@ -364,6 +370,8 @@ function_def	:	kind ID LPAR kind ID RPAR
 							ltable = ltable->next;
 							free(temp);
 						}
+						if(strcmp(current_func->name, "main") == 0)
+							fprintf(fd, "STOP\n");
 					}
 				|	kind ID LPAR error RPAR 
 					{
@@ -779,7 +787,7 @@ bool_expr	:	expr OP_EQ expr
 						char operand1[50];
 						char operand2[50];
 				
-						if($1->datatype = TYPE_INT) {
+						if($1->datatype == TYPE_INT) {
 																
 							if($1->nodetype == 'N')
 								sprintf(operand1, "#%d", (int)((struct numval *)$1)->val);
@@ -863,7 +871,7 @@ bool_expr	:	expr OP_EQ expr
 						char operand1[50];
 						char operand2[50];
 				
-						if($1->datatype = TYPE_INT) {
+						if($1->datatype == TYPE_INT) {
 																
 							if($1->nodetype == 'N')
 								sprintf(operand1, "#%d", (int)((struct numval *)$1)->val);
@@ -946,7 +954,7 @@ bool_expr	:	expr OP_EQ expr
 						char operand1[50];
 						char operand2[50];
 				
-						if($1->datatype = TYPE_INT) {
+						if($1->datatype == TYPE_INT) {
 																
 							if($1->nodetype == 'N')
 								sprintf(operand1, "#%d", (int)((struct numval *)$1)->val);
@@ -1029,7 +1037,7 @@ bool_expr	:	expr OP_EQ expr
 						char operand1[50];
 						char operand2[50];
 				
-						if($1->datatype = TYPE_INT) {
+						if($1->datatype == TYPE_INT) {
 																
 							if($1->nodetype == 'N')
 								sprintf(operand1, "#%d", (int)((struct numval *)$1)->val);
@@ -1112,7 +1120,7 @@ bool_expr	:	expr OP_EQ expr
 						char operand1[50];
 						char operand2[50];
 				
-						if($1->datatype = TYPE_INT) {
+						if($1->datatype == TYPE_INT) {
 																
 							if($1->nodetype == 'N')
 								sprintf(operand1, "#%d", (int)((struct numval *)$1)->val);
@@ -1299,7 +1307,7 @@ expr		:	ID
 					}
 					if(!found) { $$ = NULL; }
 				}
-			|	expr1
+			|	expr1 { $$ = $1; }
 			;
 
 expr1		:	expr1 OP_PLUS expr1 
