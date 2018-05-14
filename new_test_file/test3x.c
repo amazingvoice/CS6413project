@@ -1,10 +1,10 @@
 /* This is a pretty involved program.  I hope it's actually correct.  Please report errors, if you can find any. */
 
 int power2 (int);
-
+int c;
 int main(int dummy) 
 {
-  int n, c, k;
+  int n, k;
   int aux1, aux2;
  
   write "Enter an integer in decimal number system\n"; /* There's no official support for special characters in strings. but you need not check for that. */
@@ -23,7 +23,7 @@ int main(int dummy)
     if (k > 0)
       write "1";
     else
-      write ("0");
+      write "0";
 
       c = c-1;
   }

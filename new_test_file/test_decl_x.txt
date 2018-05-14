@@ -11,7 +11,7 @@ float i2f(int);
 int i2i (float); /* redeclaring i2i with different signature */
 
 int i2i; /* redeclaring a function as a variable */
-//int inc(int);
+
 float main (float z)
 { int x; /* OK */
   int x; /* redeclaring a local */

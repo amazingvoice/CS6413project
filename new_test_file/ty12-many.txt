@@ -1,0 +1,11 @@
+int fun (int);
+int fun (float); /* same function; wrong argument type */
+float fun (int); /* same function; wrong return type */
+
+int main (int dummy) {
+  float x;
+  int i;
+
+  i = fun(10.0); /* mismatch of parameter type and actual argument passed */
+  x = fun(10); /*  mismatch in return type */
+}

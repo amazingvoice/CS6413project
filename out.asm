@@ -1,54 +1,50 @@
-label 0
-JLE 0 2 1
-COPY 2 3
-COPY 0 2
-COPY 3 0
 label 1
+WRITES "Enter an integer in decimal number system\n"
+NEWLINE
+READ 5
+WRITES "in binary number system is:\n"
+WRITE 5
+NEWLINE
+COPY #31 2
 label 2
-JLE 0 #0 3
-DIV 2 0 4
-MUL 0 4 5
-SUB 2 5 6
-COPY 6 3
-COPY 0 2
-COPY 3 0
+JLE 2 #0 3
+COPY 2 0
+CALL 0
+DIV 5 1 9
+COPY 9 6
+JLE 6 #0 4
+WRITES "1"
+NEWLINE
+JUMP 5
+label 4
+WRITES "0"
+NEWLINE
+label 5
+SUB 2 #1 10
+COPY 10 2
 JUMP 2
 label 3
-COPY 2 1
-RETURN
-label 4
-WRITES "I am going to try and compute GCD using Euclid's algorithm. Gimme two integers"
+WRITES "\n"
 NEWLINE
-READ 9
-READ 10
-JLT #0 9 5
-WRITES "I wanted a positive number and you gave me "
-WRITE 9
-WRITES "!!!!"
-NEWLINE
-COPY #17 7
-RETURN
-label 5
-JLT #0 10 6
-WRITES "I wanted a positive number and you gave me "
-WRITE 10
-WRITES "!!!!"
-NEWLINE
-COPY #17 7
-RETURN
-label 6
-WRITES "Will attempt to compute GCD("
-WRITE 9
-WRITES ","
-WRITE 10
-WRITES ")"
-NEWLINE
-COPY 10 0
-COPY 9 2
-CALL 0
-WRITE 1
-NEWLINE
-COPY #0 7
+COPY #0 3
 RETURN
 STOP
-START 4
+label 0
+JGE 0 #0 6
+WRITES "Do not know how to compute negative powers, was given "
+WRITE 0
+NEWLINE
+label 6
+COPY #0 11
+COPY #1 12
+label 7
+JGE 11 2 8
+MUL 12 #2 13
+COPY 13 12
+ADD 11 #1 14
+COPY 14 11
+JUMP 7
+label 8
+COPY 12 1
+RETURN
+START 1

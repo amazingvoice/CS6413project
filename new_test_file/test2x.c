@@ -3,16 +3,16 @@
 int main(int dummy)
 {
   int n, c, k;
- 
+
   write "Enter an integer in decimal number system";
 
   read c; 
  
-  while(c>=0)
+  while(z>=0)
   {
     k = n + c;
  
-    if (k = 1)
+    if (k == 1)
       return 1 ;
     else
       return 0 ;

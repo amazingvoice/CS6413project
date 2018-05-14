@@ -652,7 +652,7 @@ stmt			:	LBRACE stmts RBRACE
 								fprintf(fd, "COPY %d %d\n", $2->mem_loc, current_func->ret_mem_loc);
 							}
 							else {
-								fprintf(fd, "COPYF %lf %d\n", $2->mem_loc, current_func->ret_mem_loc);
+								fprintf(fd, "COPYF %d %d\n", $2->mem_loc, current_func->ret_mem_loc);
 							}
 						}
 						fprintf(fd, "RETURN\n");

@@ -6,6 +6,8 @@ int main(int q) {
 	float x, y, z;
 
 	read a, b, c, x, y, z;
+	write "a, b, c: ", a, b, c;
+	write "x, y, z: ", x, y, z;	
 
 	a+b-c;
 	x*y/z;
@@ -21,7 +23,13 @@ int main(int q) {
 
 		while(z <= 5.0) {
 			write "this is in the while loop";
+			while(y <= 4.0) {
+				write "this in the inner while loop";
+				y=y+1.0;
+				write "y: ", y;
+			}
 			z=z+1.0;
+			write "z: ", z;
 		}
 
 		write func(a-b+c);

@@ -2076,7 +2076,7 @@ yyreduce:
 								fprintf(fd, "COPY %d %d\n", (yyvsp[-1].a)->mem_loc, current_func->ret_mem_loc);
 							}
 							else {
-								fprintf(fd, "COPYF %lf %d\n", (yyvsp[-1].a)->mem_loc, current_func->ret_mem_loc);
+								fprintf(fd, "COPYF %d %d\n", (yyvsp[-1].a)->mem_loc, current_func->ret_mem_loc);
 							}
 						}
 						fprintf(fd, "RETURN\n");
